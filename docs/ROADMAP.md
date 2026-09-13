@@ -28,4 +28,4 @@ DiskClearance develops through internal milestones; the first marketed release i
 - **M4:** accessibility, performance, signed/notarized packaging, clean-install proof, documentation, and v1.0 release.
 - **Post-v1:** Windows adapter and installer after the macOS product is stable.
 
-Detailed work cards are created only for the active and next milestone.
+Implementation detail stays focused on the active milestone and the one immediately after it.
