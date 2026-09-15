@@ -1,4 +1,5 @@
 pub mod boundary;
+pub mod classify;
 pub mod foundation;
 pub mod platform;
 pub mod scan;

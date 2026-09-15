@@ -1,0 +1,623 @@
+[
+  {
+    "id": "protected.cloud_sync.box",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "User synchronized cloud storage managed by Box.",
+    "whatRegenerates": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.cloud_sync.dropbox",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "User synchronized cloud storage managed by Dropbox.",
+    "whatRegenerates": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.cloud_sync.google_drive",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "User synchronized cloud storage managed by Google Drive.",
+    "whatRegenerates": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.cloud_sync.icloud_drive",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "Local cache and synchronization container for Apple iCloud Drive.",
+    "whatRegenerates": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.cloud_sync.nextcloud",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "User synchronized cloud storage managed by Nextcloud.",
+    "whatRegenerates": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.cloud_sync.onedrive",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "User synchronized cloud storage managed by Microsoft OneDrive.",
+    "whatRegenerates": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.crypto.gnupg",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "PGP secret keys, public keyrings, and trust database.",
+    "whatRegenerates": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.crypto.ssh",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "Secure Shell private keys, identity files, and known host signatures.",
+    "whatRegenerates": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.durable.apple_notes",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "User notes, attachments, and non-rebuildable local SQLite databases.",
+    "whatRegenerates": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.durable.mail",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "Local mailboxes, cached drafts, and email messages.",
+    "whatRegenerates": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.durable.messages",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "iMessage chat history, attachments, and conversation threads.",
+    "whatRegenerates": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.library.apple",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "Critical vendor system support files.",
+    "whatRegenerates": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.library.directory_services",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "Local directory node and user account database components.",
+    "whatRegenerates": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.library.kernel_extensions",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "System kernel extensions and low-level drivers.",
+    "whatRegenerates": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.library.keychains",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "System-wide cryptographic trust store and root certificates.",
+    "whatRegenerates": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.library.preferences",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "Machine-wide system configuration property lists.",
+    "whatRegenerates": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.library.security",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "Security authorization plugins, trust evaluation, and certificates.",
+    "whatRegenerates": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.library.system_extensions",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "Installed macOS driver and network system extensions.",
+    "whatRegenerates": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.source_control.git_internal",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "Git object database, commit history, branch refs, and HEAD pointer.",
+    "whatRegenerates": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.system.directory",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "Sealed core macOS operating system components and binaries.",
+    "whatRegenerates": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.system.hardware",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "Platform secure enclave and hardware support data.",
+    "whatRegenerates": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.system.iscpreboot",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "Apple Silicon secondary boot and recovery descriptors.",
+    "whatRegenerates": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.system.preboot",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "Firmware boot assets and bootloader payloads.",
+    "whatRegenerates": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.system.recovery",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "Recovery operating system and diagnostic tools.",
+    "whatRegenerates": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.system.root",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "Read-only root filesystem sealed by APFS snapshot integrity verification.",
+    "whatRegenerates": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.system.update",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "Operating system staging volume for system updates.",
+    "whatRegenerates": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.system.vm",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "macOS system swap and encrypted paging files.",
+    "whatRegenerates": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.system.xarts",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "Secure Enclave cross-architecture runtime storage.",
+    "whatRegenerates": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.time_machine.snapshots",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "APFS local snapshots created for Time Machine incremental recovery.",
+    "whatRegenerates": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.time_machine.volumes",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "Mounted Time Machine volume backup chains and catalogs.",
+    "whatRegenerates": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.user.aws_credentials",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "AWS cloud access keys, session tokens, and account configuration.",
+    "whatRegenerates": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.user.azure_credentials",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "Microsoft Azure authentication tokens and service principal profiles.",
+    "whatRegenerates": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.user.cargo_credentials",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "Crates.io and private registry publishing tokens.",
+    "whatRegenerates": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.user.docker_credentials",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "Container registry authentication tokens and credentials.",
+    "whatRegenerates": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.user.gcloud_credentials",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "Google Cloud SDK application default credentials and authentication tokens.",
+    "whatRegenerates": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.user.git_credentials",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "Cached passwords and personal access tokens for remote repositories.",
+    "whatRegenerates": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.user.keychains",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "Encrypted passwords, secrets, private keys, and application credentials.",
+    "whatRegenerates": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.user.kube_credentials",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "Cluster configuration, client certificates, and bearer tokens.",
+    "whatRegenerates": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.user.netrc",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "Plaintext network login credentials and machine authentication records.",
+    "whatRegenerates": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.user.npmrc",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "Package registry access tokens and private registry credentials.",
+    "whatRegenerates": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "rule.rebuildable.cargo_target",
+    "version": 1,
+    "owningTool": "Cargo",
+    "resultingClass": "rebuildable",
+    "confidence": "definite",
+    "userSentence": "Rust build artifacts generated by Cargo compilation.",
+    "whatRegenerates": "cargo build",
+    "recoverability": {
+      "kind": "rebuildableByTool",
+      "details": {
+        "command": "cargo build"
+      }
+    }
+  },
+  {
+    "id": "rule.rebuildable.go_build_cache",
+    "version": 1,
+    "owningTool": "Go",
+    "resultingClass": "rebuildable",
+    "confidence": "definite",
+    "userSentence": "Intermediate compilation outputs cached by the Go toolchain.",
+    "whatRegenerates": "go build",
+    "recoverability": {
+      "kind": "rebuildableByTool",
+      "details": {
+        "command": "go build"
+      }
+    }
+  },
+  {
+    "id": "rule.rebuildable.gradle_cache",
+    "version": 1,
+    "owningTool": "Gradle",
+    "resultingClass": "rebuildable",
+    "confidence": "definite",
+    "userSentence": "Compiled dependency artifacts and wrapper jars cached by Gradle.",
+    "whatRegenerates": "gradle build",
+    "recoverability": {
+      "kind": "rebuildableByTool",
+      "details": {
+        "command": "gradle build"
+      }
+    }
+  },
+  {
+    "id": "rule.rebuildable.homebrew_cache",
+    "version": 1,
+    "owningTool": "Homebrew",
+    "resultingClass": "rebuildable",
+    "confidence": "definite",
+    "userSentence": "Downloaded bottle archives and source tarballs cached by Homebrew.",
+    "whatRegenerates": "brew fetch",
+    "recoverability": {
+      "kind": "rebuildableByTool",
+      "details": {
+        "command": "brew fetch"
+      }
+    }
+  },
+  {
+    "id": "rule.rebuildable.npm_cache",
+    "version": 1,
+    "owningTool": "npm",
+    "resultingClass": "rebuildable",
+    "confidence": "definite",
+    "userSentence": "Downloaded package tarballs and metadata cached by npm.",
+    "whatRegenerates": "npm install",
+    "recoverability": {
+      "kind": "rebuildableByTool",
+      "details": {
+        "command": "npm install"
+      }
+    }
+  },
+  {
+    "id": "rule.rebuildable.xcode_derived_data",
+    "version": 1,
+    "owningTool": "Xcode",
+    "resultingClass": "rebuildable",
+    "confidence": "definite",
+    "userSentence": "Intermediate build products, module caches, and symbol indexes generated by Xcode.",
+    "whatRegenerates": "xcodebuild",
+    "recoverability": {
+      "kind": "rebuildableByTool",
+      "details": {
+        "command": "xcodebuild"
+      }
+    }
+  },
+  {
+    "id": "rule.review.downloads",
+    "version": 1,
+    "owningTool": "macOS User Space",
+    "resultingClass": "review",
+    "confidence": "definite",
+    "userSentence": "User downloaded files requiring personal inspection before removal.",
+    "whatRegenerates": null,
+    "recoverability": {
+      "kind": "trashRecoverable"
+    }
+  },
+  {
+    "id": "rule.review.durable_models",
+    "version": 1,
+    "owningTool": "AI Model Runtime",
+    "resultingClass": "review",
+    "confidence": "definite",
+    "userSentence": "Durable machine learning model weights requiring explicit user review before cleanup.",
+    "whatRegenerates": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "rule.review.git_working_tree",
+    "version": 1,
+    "owningTool": "Git",
+    "resultingClass": "review",
+    "confidence": "definite",
+    "userSentence": "Files inside a Git working tree requiring manual verification against local modifications.",
+    "whatRegenerates": null,
+    "recoverability": {
+      "kind": "sourceControlled",
+      "details": {
+        "remote": null
+      }
+    }
+  },
+  {
+    "id": "rule.review.mount_boundary",
+    "version": 1,
+    "owningTool": "macOS VFS",
+    "resultingClass": "review",
+    "confidence": "definite",
+    "userSentence": "Filesystem crossing a device or mount boundary requiring explicit review.",
+    "whatRegenerates": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  }
+]
