@@ -1,10 +1,6 @@
-export type FoundationStatus = {
-  product: string;
-  status: string;
-  platform: string;
-  scanningImplemented: boolean;
-  deletionImplemented: boolean;
-};
+import type { FoundationStatus } from "./types/bindings";
+
+export type { FoundationStatus };
 
 export const fallbackFoundation: FoundationStatus = {
   product: "DiskClearance",
