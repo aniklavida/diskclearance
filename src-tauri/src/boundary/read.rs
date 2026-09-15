@@ -420,6 +420,11 @@ mod tests {
         );
     }
 
+    // Unix-only: this asserts POSIX filesystem semantics — device+inode identity
+    // and chmod-based permission denial — which Windows does not provide. The
+    // Windows CI leg is a compile-portability check, not a behavioural one, and
+    // `docs/ARCHITECTURE.md` says Windows is unsupported.
+    #[cfg(unix)]
     #[test]
     fn test_start_scan_core_and_fetch_findings_page() {
         let fixture = DisposableFixtureTree::new("boundary-read");

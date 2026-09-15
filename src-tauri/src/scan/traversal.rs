@@ -383,6 +383,11 @@ mod tests {
     use crate::platform::tests::TestAdapter;
     use crate::scan::fixtures::DisposableFixtureTree;
 
+    // Unix-only: this asserts POSIX filesystem semantics — device+inode identity
+    // and chmod-based permission denial — which Windows does not provide. The
+    // Windows CI leg is a compile-portability check, not a behavioural one, and
+    // `docs/ARCHITECTURE.md` says Windows is unsupported.
+    #[cfg(unix)]
     #[test]
     fn test_permission_denied_directory_yields_coverage_evidence_and_partial_result() {
         let fixture = DisposableFixtureTree::new("perm-denied");
@@ -541,6 +546,11 @@ mod tests {
         assert_eq!(symlink_entry.entry_type, EntryType::Symlink);
     }
 
+    // Unix-only: this asserts POSIX filesystem semantics — device+inode identity
+    // and chmod-based permission denial — which Windows does not provide. The
+    // Windows CI leg is a compile-portability check, not a behavioural one, and
+    // `docs/ARCHITECTURE.md` says Windows is unsupported.
+    #[cfg(unix)]
     #[test]
     fn test_hardlinked_pair_contributes_bytes_exactly_once() {
         let fixture = DisposableFixtureTree::new("hardlinks");
