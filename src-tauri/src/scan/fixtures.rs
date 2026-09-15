@@ -270,6 +270,10 @@ mod tests {
         assert_eq!(mode_of(&locked), 0o000, "fixture should start unreadable");
 
         restore_perms_within(&fixture.root);
-        assert_eq!(mode_of(&locked), 0o755, "teardown must reopen the directory");
+        assert_eq!(
+            mode_of(&locked),
+            0o755,
+            "teardown must reopen the directory"
+        );
     }
 }
