@@ -1,6 +1,7 @@
 pub mod boundary;
 pub mod foundation;
 pub mod platform;
+pub mod scan;
 pub mod storage;
 
 use std::sync::Arc;

@@ -122,7 +122,7 @@ pub struct ApplicationMetadata {
 }
 
 /// Filesystem device and inode identity.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FileIdentity {
     pub device_id: u64,
@@ -146,6 +146,28 @@ pub struct MountBoundary {
     pub root_device_id: u64,
     pub path_device_id: u64,
     pub crosses_boundary: bool,
+}
+
+/// Category of filesystem entry visited during traversal.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum EntryType {
+    File,
+    Directory,
+    Symlink,
+    Other,
+}
+
+/// Rich metadata for a single filesystem entry, preserving allocated vs apparent size.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EntryMetadata {
+    pub identity: FileIdentity,
+    pub entry_type: EntryType,
+    pub apparent_size: u64,
+    pub allocated_size: u64,
+    pub modified_ms: Option<u64>,
+    pub nlink: u64,
 }
 
 /// Platform capabilities contract.
@@ -187,6 +209,7 @@ pub trait PlatformAdapter: Send + Sync {
         base: &Path,
         target: &Path,
     ) -> Result<MountBoundary, PlatformError>;
+    fn read_entry_metadata(&self, path: &Path) -> Result<EntryMetadata, PlatformError>;
 }
 
 /// Fallback adapter implementing the full trait with typed unsupported errors.
@@ -273,6 +296,10 @@ impl PlatformAdapter for UnsupportedAdapter {
         _target: &Path,
     ) -> Result<MountBoundary, PlatformError> {
         Err(PlatformError::Unsupported("check_mount_boundary"))
+    }
+
+    fn read_entry_metadata(&self, _path: &Path) -> Result<EntryMetadata, PlatformError> {
+        Err(PlatformError::Unsupported("read_entry_metadata"))
     }
 }
 
@@ -451,7 +478,7 @@ impl PlatformAdapter for MacOsAdapter {
 
     fn file_identity(&self, path: &Path) -> Result<FileIdentity, PlatformError> {
         use std::os::unix::fs::MetadataExt;
-        let meta = std::fs::metadata(path).map_err(|e| match e.kind() {
+        let meta = std::fs::symlink_metadata(path).map_err(|e| match e.kind() {
             std::io::ErrorKind::NotFound => PlatformError::NotFound(path.to_path_buf()),
             _ => PlatformError::Io(e.to_string()),
         })?;
@@ -462,10 +489,29 @@ impl PlatformAdapter for MacOsAdapter {
     }
 
     fn canonicalize_and_normalize(&self, path: &Path) -> Result<ResolvedPath, PlatformError> {
-        let canonical = path.canonicalize().map_err(|e| match e.kind() {
-            std::io::ErrorKind::NotFound => PlatformError::NotFound(path.to_path_buf()),
-            _ => PlatformError::ResolutionError(e.to_string()),
-        })?;
+        let is_symlink = path.is_symlink();
+        let canonical = if is_symlink {
+            let parent = path.parent().unwrap_or_else(|| Path::new(""));
+            let parent_canonical = if parent.as_os_str().is_empty() {
+                PathBuf::from(".")
+            } else {
+                parent.canonicalize().map_err(|e| match e.kind() {
+                    std::io::ErrorKind::NotFound => PlatformError::NotFound(path.to_path_buf()),
+                    _ => PlatformError::ResolutionError(e.to_string()),
+                })?
+            };
+            if let Some(name) = path.file_name() {
+                parent_canonical.join(name)
+            } else {
+                parent_canonical
+            }
+        } else {
+            path.canonicalize().map_err(|e| match e.kind() {
+                std::io::ErrorKind::NotFound => PlatformError::NotFound(path.to_path_buf()),
+                _ => PlatformError::ResolutionError(e.to_string()),
+            })?
+        };
+
         let (normalized, is_firmlink_alias) =
             if let Ok(stripped) = canonical.strip_prefix("/System/Volumes/Data") {
                 (Path::new("/").join(stripped), true)
@@ -491,6 +537,49 @@ impl PlatformAdapter for MacOsAdapter {
             root_device_id: base_identity.device_id,
             path_device_id: target_identity.device_id,
             crosses_boundary: base_identity.device_id != target_identity.device_id,
+        })
+    }
+
+    fn read_entry_metadata(&self, path: &Path) -> Result<EntryMetadata, PlatformError> {
+        use std::os::unix::fs::MetadataExt;
+        let meta = std::fs::symlink_metadata(path).map_err(|e| match e.kind() {
+            std::io::ErrorKind::NotFound => PlatformError::NotFound(path.to_path_buf()),
+            std::io::ErrorKind::PermissionDenied => PlatformError::PermissionDenied {
+                scope: path.to_path_buf(),
+                reason: e.to_string(),
+                settings_target: None,
+            },
+            _ => PlatformError::Io(e.to_string()),
+        })?;
+
+        let entry_type = if meta.is_symlink() {
+            EntryType::Symlink
+        } else if meta.is_dir() {
+            EntryType::Directory
+        } else if meta.is_file() {
+            EntryType::File
+        } else {
+            EntryType::Other
+        };
+
+        let apparent_size = meta.len();
+        let allocated_size = meta.blocks() * 512;
+        let modified_ms = meta
+            .modified()
+            .ok()
+            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+            .map(|d| d.as_millis() as u64);
+
+        Ok(EntryMetadata {
+            identity: FileIdentity {
+                device_id: meta.dev(),
+                inode: meta.ino(),
+            },
+            entry_type,
+            apparent_size,
+            allocated_size,
+            modified_ms,
+            nlink: meta.nlink(),
         })
     }
 }
@@ -589,6 +678,10 @@ impl PlatformAdapter for WindowsAdapter {
             "check_mount_boundary on Windows",
         ))
     }
+
+    fn read_entry_metadata(&self, _path: &Path) -> Result<EntryMetadata, PlatformError> {
+        Err(PlatformError::Unsupported("read_entry_metadata on Windows"))
+    }
 }
 
 /// Create the platform adapter instance for the current operating system.
@@ -641,6 +734,7 @@ pub mod tests {
         pub identities: Arc<Mutex<HashMap<PathBuf, FileIdentity>>>,
         pub resolved_paths: Arc<Mutex<HashMap<PathBuf, ResolvedPath>>>,
         pub mount_boundaries: Arc<Mutex<HashMap<(PathBuf, PathBuf), MountBoundary>>>,
+        pub entry_metadata_map: Arc<Mutex<HashMap<PathBuf, EntryMetadata>>>,
     }
 
     impl Default for TestAdapter {
@@ -686,6 +780,7 @@ pub mod tests {
                 identities: Arc::new(Mutex::new(HashMap::new())),
                 resolved_paths: Arc::new(Mutex::new(HashMap::new())),
                 mount_boundaries: Arc::new(Mutex::new(HashMap::new())),
+                entry_metadata_map: Arc::new(Mutex::new(HashMap::new())),
             }
         }
     }
@@ -748,6 +843,11 @@ pub mod tests {
                 .lock()
                 .unwrap()
                 .insert((base, target), boundary);
+            self
+        }
+
+        pub fn with_entry_metadata(self, path: PathBuf, meta: EntryMetadata) -> Self {
+            self.entry_metadata_map.lock().unwrap().insert(path, meta);
             self
         }
     }
@@ -852,6 +952,24 @@ pub mod tests {
         fn file_identity(&self, path: &Path) -> Result<FileIdentity, PlatformError> {
             if let Some(id) = self.identities.lock().unwrap().get(path) {
                 Ok(*id)
+            } else if let Some(meta) = self.entry_metadata_map.lock().unwrap().get(path) {
+                Ok(meta.identity)
+            } else if let Ok(meta) = std::fs::symlink_metadata(path) {
+                #[cfg(unix)]
+                {
+                    use std::os::unix::fs::MetadataExt;
+                    Ok(FileIdentity {
+                        device_id: meta.dev(),
+                        inode: meta.ino(),
+                    })
+                }
+                #[cfg(not(unix))]
+                {
+                    Ok(FileIdentity {
+                        device_id: 1,
+                        inode: 100,
+                    })
+                }
             } else {
                 Ok(FileIdentity {
                     device_id: 1,
@@ -863,6 +981,37 @@ pub mod tests {
         fn canonicalize_and_normalize(&self, path: &Path) -> Result<ResolvedPath, PlatformError> {
             if let Some(res) = self.resolved_paths.lock().unwrap().get(path) {
                 Ok(res.clone())
+            } else if path.exists() || path.is_symlink() {
+                let is_symlink = path.is_symlink();
+                let canonical = if is_symlink {
+                    let parent = path.parent().unwrap_or_else(|| Path::new(""));
+                    let parent_canonical = if parent.as_os_str().is_empty() {
+                        PathBuf::from(".")
+                    } else {
+                        parent
+                            .canonicalize()
+                            .unwrap_or_else(|_| parent.to_path_buf())
+                    };
+                    if let Some(name) = path.file_name() {
+                        parent_canonical.join(name)
+                    } else {
+                        parent_canonical
+                    }
+                } else {
+                    path.canonicalize().unwrap_or_else(|_| path.to_path_buf())
+                };
+                let (normalized, is_firmlink_alias) =
+                    if let Ok(stripped) = canonical.strip_prefix("/System/Volumes/Data") {
+                        (Path::new("/").join(stripped), true)
+                    } else {
+                        (canonical.clone(), false)
+                    };
+                Ok(ResolvedPath {
+                    original: path.to_path_buf(),
+                    canonical,
+                    normalized,
+                    is_firmlink_alias,
+                })
             } else {
                 Ok(ResolvedPath {
                     original: path.to_path_buf(),
@@ -893,6 +1042,60 @@ pub mod tests {
                 path_device_id: t.device_id,
                 crosses_boundary: b.device_id != t.device_id,
             })
+        }
+
+        fn read_entry_metadata(&self, path: &Path) -> Result<EntryMetadata, PlatformError> {
+            if let Some(meta) = self.entry_metadata_map.lock().unwrap().get(path) {
+                return Ok(meta.clone());
+            }
+            if let Some(id) = self.identities.lock().unwrap().get(path) {
+                return Ok(EntryMetadata {
+                    identity: *id,
+                    entry_type: EntryType::File,
+                    apparent_size: 1024,
+                    allocated_size: 1024,
+                    modified_ms: Some(0),
+                    nlink: 1,
+                });
+            }
+            if let Ok(meta) = std::fs::symlink_metadata(path) {
+                let entry_type = if meta.is_symlink() {
+                    EntryType::Symlink
+                } else if meta.is_dir() {
+                    EntryType::Directory
+                } else if meta.is_file() {
+                    EntryType::File
+                } else {
+                    EntryType::Other
+                };
+                let apparent_size = meta.len();
+                #[cfg(unix)]
+                let (dev, ino, allocated_size, nlink) = {
+                    use std::os::unix::fs::MetadataExt;
+                    (meta.dev(), meta.ino(), meta.blocks() * 512, meta.nlink())
+                };
+                #[cfg(not(unix))]
+                let (dev, ino, allocated_size, nlink) = (1, 100, meta.len(), 1);
+
+                let modified_ms = meta
+                    .modified()
+                    .ok()
+                    .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                    .map(|d| d.as_millis() as u64);
+
+                return Ok(EntryMetadata {
+                    identity: FileIdentity {
+                        device_id: dev,
+                        inode: ino,
+                    },
+                    entry_type,
+                    apparent_size,
+                    allocated_size,
+                    modified_ms,
+                    nlink,
+                });
+            }
+            Err(PlatformError::NotFound(path.to_path_buf()))
         }
     }
 
@@ -1062,6 +1265,10 @@ pub mod tests {
         assert_eq!(
             adapter.check_mount_boundary(Path::new("/dummy_a"), Path::new("/dummy_b")),
             Err(PlatformError::Unsupported("check_mount_boundary"))
+        );
+        assert_eq!(
+            adapter.read_entry_metadata(Path::new("/dummy")),
+            Err(PlatformError::Unsupported("read_entry_metadata"))
         );
     }
 
