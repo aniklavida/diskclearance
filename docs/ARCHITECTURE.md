@@ -31,7 +31,35 @@ The renderer never receives unrestricted filesystem authority. It requests typed
 
 ## Platform boundary
 
-`PlatformAdapter` owns path discovery, permissions, Trash, application metadata, filesystem identity, and other OS-specific behavior. macOS is implemented first. Windows must implement the same domain contracts rather than introducing OS checks throughout the core.
+`PlatformAdapter` owns path discovery, permissions, Trash, application metadata, filesystem identity, and other OS-specific behavior. The adapter is resolved once at application startup into managed Tauri state. Domain modules depend on `&dyn PlatformAdapter` rather than conditional compilation (`#[cfg(target_os)]`), ensuring core domain logic is decoupled from OS specifics.
+
+### Contract capabilities and status
+
+- **Path discovery:**
+  - Discover standard locations (home, application support, caches, Trash directory, application directories, and default scan roots) returning typed `DiscoveredPath` and `ScanRoot` structures.
+  - Status on macOS: **implemented and tested**.
+  - Status on Windows: **unsupported**.
+- **Permissions:**
+  - Query scope readability (`ScopePermission`) without triggering immediate prompts, and map restricted paths to their required System Settings destination (`SettingsDestination`).
+  - Status on macOS: **implemented and tested**.
+  - Status on Windows: **unsupported**.
+- **Filesystem identity:**
+  - Query device and inode identities (`FileIdentity`), resolve and normalise canonical paths including macOS firmlinks and `/System/Volumes/Data` aliasing (`ResolvedPath`), and detect filesystem mount boundaries (`MountBoundary`).
+  - Status on macOS: **implemented and tested**.
+  - Status on Windows: **unsupported**.
+- **Trash lifecycle:**
+  - Move items to Trash while preserving Put Back origin (`TrashedItem`), enumerate current Trash contents, and verify whether a previously trashed item is still present (`TrashedItemStatus`).
+  - Status: **unsupported** (planned for milestone M2). Returns typed unsupported error.
+- **Application metadata:**
+  - Inspect installed bundle identifiers, version strings, install paths, and measured footprints (`ApplicationMetadata`).
+  - Status: **unsupported** (planned for milestone M3). Returns typed unsupported error.
+
+### Implementations
+
+1. `MacOsAdapter`: macOS platform adapter implementing path discovery, permissions, and filesystem identity, with Trash and application metadata returning typed unsupported errors.
+2. `WindowsAdapter`: stub implementation compiling as a portability check in CI, returning typed unsupported errors for all capabilities. Windows is not supported in the current milestone.
+3. `UnsupportedAdapter`: fallback implementation returning typed unsupported errors for every capability, providing a compiler-enforced checklist for new platform ports.
+4. `TestAdapter`: hermetic in-memory implementation available in tests to report scripted paths, permissions, identities, and simulated Trash lifecycle without touching real filesystems.
 
 A privileged helper is not part of the default architecture. If a macOS operation cannot be safely completed in-process, it may use a narrowly scoped, code-signature-validated XPC helper with explicit commands and no arbitrary path execution.
 
