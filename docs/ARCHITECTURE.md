@@ -79,6 +79,18 @@ A privileged helper is not part of the default architecture. If a macOS operatio
 
 SQLite uses forward-only migrations. Core records include scan sessions, findings, rule versions, review plans, plan items, operations, operation items, and restore outcomes. Paths stored for history are local-only and must never be included in telemetry or public diagnostics.
 
+### Storage and migration lifecycle
+
+- **Database location:** Resolved via `PlatformAdapter::application_support_directory()` under `com.aniklavida.diskclearance/diskclearance.db`. Opened once at application startup and held in managed Tauri state.
+- **Connection configuration:** Every connection enforces `PRAGMA foreign_keys = ON` and `PRAGMA journal_mode = WAL`.
+- **Migration runner:** Forward-only and append-only. Migrations execute in numeric order inside a single transaction per migration that commits both DDL changes and the `schema_migrations` record atomically. A failed migration rolls back completely without leaving partial schema.
+- **Downgrade protection:** The runner inspects the highest recorded schema version and refuses to open any database whose version exceeds the binary's known migrations.
+- **Corrupt database recovery:** If corruption or malformed database files are detected during opening or integrity validation, the existing file (and any `-wal`/`-shm` sidecars) is preserved by renaming with a `.corrupt.<timestamp>` suffix. A clean database is then created and initialized, and the recovery event is surfaced.
+- **Schema status:**
+  - Migration `0001` (foundation `schema_migrations` table): **implemented and tested**.
+  - Migration `0002` (core tables: `scan_sessions`, `findings`, `rule_versions`): **implemented and tested**.
+  - Subsequent tables (`review_plans`, `plan_items`, `operations`, `operation_items`, `restore_outcomes`): **planned for v1.0**.
+
 ## Performance model
 
 Traversal and hashing use bounded concurrency. UI updates are throttled and streamed so cancellation stays responsive. Duplicate hashing proceeds by size, quick fingerprint, then full content; full hashing is never the first pass. Memory usage must be bounded independently of item count.
