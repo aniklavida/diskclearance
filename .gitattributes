@@ -1,0 +1,12 @@
+# The rule-catalogue snapshot is compared byte for byte against JSON generated
+# at run time, which always uses LF. Left to its default, Git checks this file
+# out with CRLF on Windows and the comparison fails there and only there.
+# Text files in this repository are LF on every platform.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.icns binary
+*.woff binary
+*.woff2 binary
