@@ -17,9 +17,24 @@ Platform adapter ─── macOS first, Windows later
 
 The renderer never receives unrestricted filesystem authority. It requests typed read or action-plan operations; Rust validates inputs and emits typed progress and results.
 
+### IPC boundary and typed contracts
+
+- **Generated boundary definitions:** All IPC boundary types are generated from Rust definitions into `src/types/bindings.ts`. CI enforces that committed TypeScript definitions match the Rust definitions, preventing type drift.
+- **Capability-split command vocabulary:**
+  - _Read:_ `foundation_status`, `start_scan`, `cancel_scan`, `fetch_findings_page` (paged with cursors), `fetch_folder_aggregate`, `fetch_application_inventory`.
+  - _Plan:_ `build_plan`, `fetch_plan`, `revalidate_plan`.
+  - _Destructive:_ `execute_plan` accepting only a plan identifier and an explicit action mode (`trash` or `permanentDelete`). Destructive commands never accept filesystem paths.
+- **Status of domain command handlers:**
+  - `foundation_status`: **implemented and tested**.
+  - `start_scan`, `cancel_scan`, and `fetch_findings_page`: **implemented and tested** on macOS; unsupported on Windows.
+  - Planning (`build_plan`, `fetch_plan`, `revalidate_plan`), execution (`execute_plan`), and exploration/inventory command handlers: **unsupported** in the current milestone (returning typed `unsupported` errors until subsequent domain implementations arrive).
+- **Discriminated error model:** Every command returns a discriminated result (`permissionDenied`, `pathVanished`, `changedAfterReview`, `unsupported`) ensuring failure reasons are machine-readable.
+- **Throttled event streaming:** Events (`scan:progress`, `scan:verified-count`, `scan:warning`, `execute:item-outcome`, `scan:terminal`) are coalesced by an emitter-side progress throttler against a time budget before IPC emission, preventing assistive technology flooding.
+- **Cancellation channel:** Work cancellation is controlled via an explicit cancellation registry and thread-safe tokens, ensuring cancelling stops execution in the core rather than merely dropping the listener.
+
 ## Rust domains
 
-- **scan:** bounded, cancellable traversal and partial-result reporting.
+- **scan:** bounded, cancellable traversal and partial-result reporting (**implemented and tested** on macOS).
 - **classify:** versioned rules, evidence, and Rebuildable/Review/Protected classification.
 - **explore:** aggregate folder sizes and visualisation data.
 - **duplicates:** size grouping, staged hashing, and exact-content groups.
@@ -53,13 +68,17 @@ The renderer never receives unrestricted filesystem authority. It requests typed
 - **Application metadata:**
   - Inspect installed bundle identifiers, version strings, install paths, and measured footprints (`ApplicationMetadata`).
   - Status: **unsupported** (planned for milestone M3). Returns typed unsupported error.
+- **Entry metadata inspection:**
+  - Inspect apparent size and allocated block footprint, file types, modification timestamps, and link counts without following symlinks into unrequested scopes (`EntryMetadata`).
+  - Status on macOS: **implemented and tested**.
+  - Status on Windows: **unsupported**.
 
 ### Implementations
 
-1. `MacOsAdapter`: macOS platform adapter implementing path discovery, permissions, and filesystem identity, with Trash and application metadata returning typed unsupported errors.
+1. `MacOsAdapter`: macOS platform adapter implementing path discovery, permissions, filesystem identity, and entry metadata inspection, with Trash and application metadata returning typed unsupported errors.
 2. `WindowsAdapter`: stub implementation compiling as a portability check in CI, returning typed unsupported errors for all capabilities. Windows is not supported in the current milestone.
 3. `UnsupportedAdapter`: fallback implementation returning typed unsupported errors for every capability, providing a compiler-enforced checklist for new platform ports.
-4. `TestAdapter`: hermetic in-memory implementation available in tests to report scripted paths, permissions, identities, and simulated Trash lifecycle without touching real filesystems.
+4. `TestAdapter`: hermetic in-memory implementation available in tests to report scripted paths, permissions, identities, entry metadata, and simulated Trash lifecycle without touching real filesystems.
 
 A privileged helper is not part of the default architecture. If a macOS operation cannot be safely completed in-process, it may use a narrowly scoped, code-signature-validated XPC helper with explicit commands and no arbitrary path execution.
 

@@ -8,13 +8,15 @@
     "build": "tsc --noEmit && tsc -p tsconfig.node.json --noEmit && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
+    "types:generate": "cargo run --manifest-path src-tauri/Cargo.toml --bin export_types",
+    "types:check": "cargo run --manifest-path src-tauri/Cargo.toml --bin export_types -- --check",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
     "rust:fmt": "cargo fmt --manifest-path src-tauri/Cargo.toml --check",
     "rust:test": "cargo test --manifest-path src-tauri/Cargo.toml",
     "rust:check": "cargo check --manifest-path src-tauri/Cargo.toml",
-    "check": "npm run format:check && npm run test && npm run build && npm run rust:fmt && npm run rust:test && npm run rust:check"
+    "check": "npm run types:check && npm run format:check && npm run test && npm run build && npm run rust:fmt && npm run rust:test && npm run rust:check"
   },
   "dependencies": {
     "react": "^19.1.0",
