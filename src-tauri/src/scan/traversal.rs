@@ -8,10 +8,18 @@ use crate::platform::{EntryType, FileIdentity, PlatformAdapter, PlatformError};
 use crate::scan::coverage::{CoverageSummary, SkipReason, SkippedScope};
 use crate::scan::entry::ScannedEntry;
 
-/// Memory allocation tracker proving bounded resident footprint during traversal.
+/// Tracks the high-water mark of scan records the traversal is holding.
+///
+/// It counts two things and must keep counting both: the transient record being
+/// processed right now, **and every record the walk retains**. Counting only the
+/// transient one would report a flat peak of 1 even while the whole tree was being
+/// accumulated in memory — a test named after the streaming guarantee that does not
+/// enforce it. That exact regression was introduced deliberately and the earlier
+/// version of this tracker did not notice, which is why `track_retained` exists.
 #[derive(Debug, Default)]
 pub struct MemoryTracker {
     live_records: AtomicUsize,
+    retained_records: AtomicUsize,
     peak_records: AtomicUsize,
 }
 
@@ -27,6 +35,16 @@ impl MemoryTracker {
 
     pub fn track_dealloc(&self) {
         self.live_records.fetch_sub(1, Ordering::SeqCst);
+    }
+
+    /// Records that one more entry is being kept for the lifetime of the walk.
+    /// Never paired with a release, because retention is the thing being measured.
+    pub fn track_retained(&self) {
+        let current = self.retained_records.fetch_add(1, Ordering::SeqCst) + 1;
+        self.peak_records.fetch_max(
+            current + self.live_records.load(Ordering::SeqCst),
+            Ordering::SeqCst,
+        );
     }
 
     pub fn live(&self) -> usize {
@@ -323,6 +341,9 @@ where
 
             if options.collect_entries {
                 collected_entries.push(entry);
+                if let Some(tracker) = options.tracker {
+                    tracker.track_retained();
+                }
             }
 
             if let Some(tracker) = options.tracker {
