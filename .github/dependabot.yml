@@ -1,0 +1,27 @@
+# Scoped to GitHub Actions on purpose.
+#
+# Actions are the dependencies most likely to rot silently: a pinned action keeps
+# working right up until the runner drops the Node version it targets, and nothing
+# in this repository's checks would notice beforehand.
+#
+# npm and Cargo updates are left off. AGENTS.md requires every shipped dependency's
+# licence to be verified from its real metadata and recorded with the date it was
+# checked, so a routine version bump is an audit, not a one-click merge. A security
+# advisory earns that work; "a newer patch exists" does not. Dependabot security
+# updates are enabled on the repository itself and open a pull request only when a
+# real advisory exists.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: monthly
+    # One pull request for all of them rather than one each.
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    labels:
+      - dependencies
+    commit-message:
+      prefix: "Update"
