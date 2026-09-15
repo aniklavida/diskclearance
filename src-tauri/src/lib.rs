@@ -1,3 +1,4 @@
+pub mod boundary;
 pub mod foundation;
 pub mod platform;
 pub mod storage;
@@ -22,11 +23,24 @@ pub fn run() {
         }
         Err(err) => panic!("failed to open application database: {err}"),
     };
+    let cancellations = boundary::CancellationRegistry::new();
 
     tauri::Builder::default()
         .manage(adapter)
         .manage(database)
-        .invoke_handler(tauri::generate_handler![foundation_status])
+        .manage(cancellations)
+        .invoke_handler(tauri::generate_handler![
+            foundation_status,
+            boundary::read::start_scan,
+            boundary::read::cancel_scan,
+            boundary::read::fetch_findings_page,
+            boundary::read::fetch_folder_aggregate,
+            boundary::read::fetch_application_inventory,
+            boundary::plan::build_plan,
+            boundary::plan::fetch_plan,
+            boundary::plan::revalidate_plan,
+            boundary::destructive::execute_plan,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

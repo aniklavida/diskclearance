@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
-import { fallbackFoundation, type FoundationStatus } from "./foundation";
+import { fallbackFoundation } from "./foundation";
+import type { FoundationStatus } from "./types/bindings";
 
 export default function App() {
   const [foundation, setFoundation] = useState(fallbackFoundation);

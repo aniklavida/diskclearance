@@ -17,6 +17,20 @@ Platform adapter ─── macOS first, Windows later
 
 The renderer never receives unrestricted filesystem authority. It requests typed read or action-plan operations; Rust validates inputs and emits typed progress and results.
 
+### IPC boundary and typed contracts
+
+- **Generated boundary definitions:** All IPC boundary types are generated from Rust definitions into `src/types/bindings.ts`. CI enforces that committed TypeScript definitions match the Rust definitions, preventing type drift.
+- **Capability-split command vocabulary:**
+  - _Read:_ `foundation_status`, `start_scan`, `cancel_scan`, `fetch_findings_page` (paged with cursors), `fetch_folder_aggregate`, `fetch_application_inventory`.
+  - _Plan:_ `build_plan`, `fetch_plan`, `revalidate_plan`.
+  - _Destructive:_ `execute_plan` accepting only a plan identifier and an explicit action mode (`trash` or `permanentDelete`). Destructive commands never accept filesystem paths.
+- **Status of domain command handlers:**
+  - `foundation_status`: **implemented and tested**.
+  - Scan, planning, and execution command handlers: **unsupported** in the current foundation milestone (returning typed `unsupported` errors until subsequent domain implementations arrive).
+- **Discriminated error model:** Every command returns a discriminated result (`permissionDenied`, `pathVanished`, `changedAfterReview`, `unsupported`) ensuring failure reasons are machine-readable.
+- **Throttled event streaming:** Events (`scan:progress`, `scan:verified-count`, `scan:warning`, `execute:item-outcome`, `scan:terminal`) are coalesced by an emitter-side progress throttler against a time budget before IPC emission, preventing assistive technology flooding.
+- **Cancellation channel:** Work cancellation is controlled via an explicit cancellation registry and thread-safe tokens, ensuring cancelling stops execution in the core rather than merely dropping the listener.
+
 ## Rust domains
 
 - **scan:** bounded, cancellable traversal and partial-result reporting.

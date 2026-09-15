@@ -1,15 +1,16 @@
 use serde::Serialize;
+use ts_rs::TS;
 
 use crate::platform::{self, PlatformAdapter};
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct FoundationStatus {
-    product: &'static str,
-    status: &'static str,
-    platform: &'static str,
-    scanning_implemented: bool,
-    deletion_implemented: bool,
+    pub product: &'static str,
+    pub status: &'static str,
+    pub platform: &'static str,
+    pub scanning_implemented: bool,
+    pub deletion_implemented: bool,
 }
 
 impl FoundationStatus {
@@ -47,5 +48,14 @@ mod tests {
         assert_eq!(status.platform, "test");
         assert!(!status.scanning_implemented);
         assert!(!status.deletion_implemented);
+    }
+
+    #[test]
+    fn foundation_status_ts_declaration() {
+        use ts_rs::TS;
+        let decl = FoundationStatus::decl(&ts_rs::Config::default());
+        assert!(decl.contains("type FoundationStatus = {"));
+        assert!(decl.contains("scanningImplemented: boolean,"));
+        assert!(decl.contains("deletionImplemented: boolean,"));
     }
 }
