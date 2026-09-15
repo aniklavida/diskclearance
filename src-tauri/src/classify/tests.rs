@@ -799,9 +799,13 @@ fn test_rule_catalogue_snapshot() {
     }
 
     let committed_snapshot = include_str!("rule_catalogue_snapshot.json");
+    // Compare with line endings normalised. The generated JSON always uses LF;
+    // a checkout that rewrites the committed file to CRLF would otherwise fail
+    // this test on that platform alone, which says nothing about the catalogue.
+    // `.gitattributes` pins the file to LF as well — this is the second lock.
     assert_eq!(
-        current_snapshot.trim(),
-        committed_snapshot.trim(),
+        current_snapshot.replace("\r\n", "\n").trim(),
+        committed_snapshot.replace("\r\n", "\n").trim(),
         "Rule catalogue snapshot differs from committed snapshot. Any change must be deliberate."
     );
 }
