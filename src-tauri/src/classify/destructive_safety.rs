@@ -240,6 +240,9 @@ fn test_prevent_symlink_deletion_from_traversing_outward_or_destroying_target() 
 }
 
 /// Damage prevented: Symlinks pointing at protected roots being classified as Rebuildable.
+// Creating a symlink needs a privilege Windows runners do not have, and the
+// symlink call in this test is already Unix-only.
+#[cfg(unix)]
 #[test]
 fn test_prevent_symlink_pointing_to_protected_root_from_revalidation() {
     let adapter = ClassificationTestAdapter::new("symlink-revalidation");
@@ -292,6 +295,9 @@ fn test_prevent_execution_engine_from_traversing_symlink_targets_during_cleanup(
 
 /// Damage prevented: An attacker swapping a reviewed file with an arbitrary target file
 /// at the same path prior to execution.
+// Windows has no stable device+inode pair, so an identity change cannot be
+// detected the way this test asserts. macOS is the supported platform.
+#[cfg(unix)]
 #[test]
 fn test_prevent_deletion_of_file_replaced_between_review_and_execution() {
     let adapter = ClassificationTestAdapter::new("file-replacement");
@@ -826,6 +832,9 @@ fn test_prevent_restore_engine_from_clobbering_existing_file_at_destination() {
 
 /// Damage prevented: Filenames containing shell argument flags (e.g. `--force`, `-rf`),
 /// newlines, leading hyphens, or unicode causing command injection or path corruption.
+// Windows forbids the characters this test relies on in a filename — a
+// newline cannot be created at all, so there is nothing to defend against.
+#[cfg(unix)]
 #[test]
 fn test_prevent_hostile_names_from_injecting_command_arguments_or_corrupting_paths() {
     let adapter = ClassificationTestAdapter::new("hostile-names");
