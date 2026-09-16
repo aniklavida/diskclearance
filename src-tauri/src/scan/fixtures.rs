@@ -40,18 +40,37 @@ impl DisposableFixtureTree {
     }
 
     /// Hard invariant check: panics if any candidate path escapes the temporary fixture.
+    ///
+    /// Evaluates lexical components so that relative traversal (e.g. `../`) cannot bypass
+    /// the prefix check. Normalizes both the path and fixture root to prevent escaping.
     pub fn assert_path_in_fixture(&self, path: &Path) {
-        let root_canon = self
-            .root
-            .canonicalize()
-            .unwrap_or_else(|_| self.root.clone());
-        let path_canon = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+        let abs_path = if path.is_relative() {
+            self.root.join(path)
+        } else {
+            path.to_path_buf()
+        };
+        let norm_path = normalize_lexically(&abs_path);
+        let norm_root = normalize_lexically(&self.root);
+        let norm_root_canon = normalize_lexically(
+            &self
+                .root
+                .canonicalize()
+                .unwrap_or_else(|_| self.root.clone()),
+        );
+
         assert!(
-            path.starts_with(&self.root) || path_canon.starts_with(&root_canon),
+            norm_path.starts_with(&norm_root) || norm_path.starts_with(&norm_root_canon),
             "Safety invariant violated: path {} is outside fixture root {}",
             path.display(),
             self.root.display()
         );
+    }
+
+    /// Returns the absolute path inside the fixture, enforcing containment.
+    pub fn path(&self, rel: impl AsRef<Path>) -> PathBuf {
+        let p = self.root.join(rel);
+        self.assert_path_in_fixture(&p);
+        p
     }
 
     pub fn create_dir(&self, rel: &str) -> PathBuf {
@@ -106,6 +125,157 @@ impl DisposableFixtureTree {
         }
         path
     }
+
+    /// Creates deeply nested directories inside the fixture up to `depth` levels.
+    pub fn create_deeply_nested_dir(&self, rel_base: &str, depth: usize) -> PathBuf {
+        let mut cur = PathBuf::from(rel_base);
+        for i in 0..depth {
+            cur.push(format!("level_{i}"));
+        }
+        self.create_dir(cur.to_str().expect("valid utf-8 rel path"))
+    }
+
+    /// Creates files with hostile filenames: spaces, newlines, leading hyphens, unicode.
+    pub fn create_hostile_name_files(&self, rel_base: &str) -> Vec<PathBuf> {
+        self.create_dir(rel_base);
+        let names = [
+            "--force",
+            "-rf",
+            "-leading-hyphen.log",
+            "spaced filename with multiple words.txt",
+            "newline\nin\nfilename.txt",
+            "unicode_🦀_é_日本語_파일.tmp",
+        ];
+        let mut created = Vec::new();
+        for name in names {
+            let rel = format!("{rel_base}/{name}");
+            created.push(self.create_file(&rel, b"hostile file payload"));
+        }
+        created
+    }
+
+    /// Replaces file content at `rel`, asserting containment.
+    pub fn replace_file_content(&self, rel: &str, new_content: &[u8]) -> PathBuf {
+        let path = self.root.join(rel);
+        self.assert_path_in_fixture(&path);
+        std::fs::write(&path, new_content).expect("failed to replace file content");
+        path
+    }
+
+    /// Replaces file at `rel` ensuring a brand new inode is allocated while retaining path.
+    pub fn replace_with_new_inode(&self, rel: &str, content: &[u8]) -> PathBuf {
+        let path = self.root.join(rel);
+        self.assert_path_in_fixture(&path);
+        #[cfg(unix)]
+        let orig_ino = {
+            use std::os::unix::fs::MetadataExt;
+            std::fs::metadata(&path).map(|m| m.ino()).unwrap_or(0)
+        };
+
+        std::fs::remove_file(&path).expect("failed to remove original file");
+
+        // On filesystems like APFS, quickly recreating may recycle the inode.
+        // Create dummy files to force allocation of distinct inode if needed.
+        let mut dummies = Vec::new();
+        let mut attempts = 0;
+        loop {
+            std::fs::write(&path, content).expect("failed to write replaced file");
+            #[cfg(unix)]
+            let new_ino = {
+                use std::os::unix::fs::MetadataExt;
+                std::fs::metadata(&path).map(|m| m.ino()).unwrap_or(0)
+            };
+            #[cfg(not(unix))]
+            break;
+
+            #[cfg(unix)]
+            if new_ino != orig_ino || orig_ino == 0 || attempts > 20 {
+                break;
+            }
+            std::fs::remove_file(&path).expect("remove retry file");
+            let dummy = self.root.join(format!(".dummy_alloc_{attempts}"));
+            let _ = std::fs::write(&dummy, b"pad");
+            dummies.push(dummy);
+            attempts += 1;
+        }
+
+        for dummy in dummies {
+            let _ = std::fs::remove_file(dummy);
+        }
+
+        path
+    }
+
+    /// Replaces directory with a symlink at the same path.
+    pub fn replace_dir_with_symlink(&self, rel: &str, target: &Path) -> PathBuf {
+        let path = self.root.join(rel);
+        self.assert_path_in_fixture(&path);
+        #[cfg(unix)]
+        restore_perms_within(&path);
+        std::fs::remove_dir_all(&path).expect("failed to remove dir for replacement");
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(target, &path).expect("failed to replace dir with symlink");
+        #[cfg(windows)]
+        std::os::windows::fs::symlink_dir(target, &path)
+            .expect("failed to replace dir with symlink");
+        path
+    }
+
+    /// Replaces file with a symlink at the same path.
+    pub fn replace_file_with_symlink(&self, rel: &str, target: &Path) -> PathBuf {
+        let path = self.root.join(rel);
+        self.assert_path_in_fixture(&path);
+        std::fs::remove_file(&path).expect("failed to remove file for replacement");
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(target, &path).expect("failed to replace file with symlink");
+        #[cfg(windows)]
+        std::os::windows::fs::symlink_file(target, &path)
+            .expect("failed to replace file with symlink");
+        path
+    }
+
+    /// Deletes a file or directory inside the fixture, asserting containment.
+    pub fn remove_path(&self, rel: &str) {
+        let path = self.root.join(rel);
+        self.assert_path_in_fixture(&path);
+        if path.is_dir() {
+            #[cfg(unix)]
+            restore_perms_within(&path);
+            let _ = std::fs::remove_dir_all(&path);
+        } else {
+            let _ = std::fs::remove_file(&path);
+        }
+    }
+
+    /// Reads contents of a file inside the fixture, asserting containment.
+    pub fn read_file(&self, rel: &str) -> Vec<u8> {
+        let path = self.root.join(rel);
+        self.assert_path_in_fixture(&path);
+        std::fs::read(&path).expect("failed to read file in fixture")
+    }
+
+    /// Checks existence of a path inside the fixture, asserting containment.
+    pub fn exists(&self, rel: &str) -> bool {
+        let path = self.root.join(rel);
+        self.assert_path_in_fixture(&path);
+        path.exists()
+    }
+}
+
+/// Normalizes path lexically by eliminating `.` and resolving `..` components.
+pub fn normalize_lexically(path: &Path) -> PathBuf {
+    use std::path::Component;
+    let mut normalized = PathBuf::new();
+    for component in path.components() {
+        match component {
+            Component::CurDir => {}
+            Component::ParentDir => {
+                normalized.pop();
+            }
+            c => normalized.push(c.as_os_str()),
+        }
+    }
+    normalized
 }
 
 /// Hard ceiling on how much teardown will touch. A fixture is a handful of
@@ -275,5 +445,66 @@ mod tests {
             0o755,
             "teardown must reopen the directory"
         );
+    }
+
+    #[test]
+    #[should_panic(expected = "Safety invariant violated")]
+    fn harness_asserts_containment_and_blocks_traversal_escape() {
+        let fixture = DisposableFixtureTree::new("containment-traversal");
+        let escaping_path = fixture.root.join("../deliberate_escape_traversal.txt");
+        fixture.assert_path_in_fixture(&escaping_path);
+    }
+
+    #[test]
+    #[should_panic(expected = "Safety invariant violated")]
+    fn harness_asserts_containment_and_blocks_absolute_escape() {
+        let fixture = DisposableFixtureTree::new("containment-absolute");
+        let escaping_path = PathBuf::from("/tmp/deliberate_absolute_escape.txt");
+        fixture.assert_path_in_fixture(&escaping_path);
+    }
+
+    #[test]
+    fn harness_creates_and_manages_awkward_shapes() {
+        let fixture = DisposableFixtureTree::new("awkward-shapes");
+
+        // 1. Hostile names
+        let hostile = fixture.create_hostile_name_files("hostile_dir");
+        assert_eq!(hostile.len(), 6);
+        for path in &hostile {
+            assert!(path.exists());
+        }
+
+        // 2. Deep nesting
+        let deep = fixture.create_deeply_nested_dir("nested_base", 15);
+        assert!(deep.exists());
+
+        // 3. New inode allocation
+        let test_file = fixture.create_file("inode_test.txt", b"original inode content");
+        #[cfg(unix)]
+        let orig_ino = {
+            use std::os::unix::fs::MetadataExt;
+            std::fs::metadata(&test_file).unwrap().ino()
+        };
+        fixture.replace_with_new_inode("inode_test.txt", b"new inode content");
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::MetadataExt;
+            let new_ino = std::fs::metadata(&test_file).unwrap().ino();
+            assert_ne!(
+                orig_ino, new_ino,
+                "replace_with_new_inode must allocate a fresh inode"
+            );
+        }
+
+        // 4. File and dir replaced by symlink
+        let target_file = fixture.create_file("sym_target.txt", b"target");
+        let replaced_file = fixture.create_file("to_be_replaced_file.txt", b"before");
+        fixture.replace_file_with_symlink("to_be_replaced_file.txt", &target_file);
+        assert!(replaced_file.is_symlink());
+
+        let dir_target = fixture.create_dir("dir_target");
+        fixture.create_dir("to_be_replaced_dir");
+        let replaced_dir = fixture.replace_dir_with_symlink("to_be_replaced_dir", &dir_target);
+        assert!(replaced_dir.is_symlink());
     }
 }

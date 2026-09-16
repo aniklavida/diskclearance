@@ -15,6 +15,37 @@
 - [ ] Restore is offered only for an exact item still available in Trash.
 - [ ] A third-party security review or documented maintainer threat-model review is complete.
 
+### Automated test coverage
+
+The destructive-safety suite (`src-tauri/src/classify/destructive_safety.rs`) runs on hermetic disposable fixtures (`DisposableFixtureTree`). Two things are true of it and both matter:
+
+**Running today, on every pull request.** These exercise code that exists:
+
+- **Protected-path enforcement.** Every protected root in the rule catalogue is rejected by the plan builder, and `PlannableClass` has no protected variant, so a plan item cannot carry one at all.
+- **Classification under attack.** Symlinks from a rebuildable cache into a source tree or a credential store, a path replaced between classification and re-read, a cache directory inside a working tree, a credential file named like a cache, a mount boundary crossed mid-rule, and a durable model store that must not be called rebuildable.
+- **Fixture containment.** The harness asserts every path it touches is inside the fixture root, refuses to follow a symlink out of it, and bounds its own walk. Disabling any of those fails a named test.
+
+**Written, committed and deliberately not running.** Eleven tests carry `#[ignore]` naming the execution-engine milestone. They describe behaviour `execute_plan` and the restore path must have and **do not yet have**, because that engine is not written:
+
+- pre-execution revalidation rejecting protected roots and identity changes,
+- deletion removing a symlink without traversing its target,
+- inode reallocation caught where name, size and mtime match,
+- recursive deletion halting at a mount boundary,
+- cancellation leaving neither half-deleted nor double-counted items,
+- partial failure producing one outcome row per item across four categories,
+- a vanished target recorded rather than aborting the batch,
+- Trash mode reporting zero permanently reclaimed bytes,
+- restore declining to clobber an occupied destination,
+- deletion issuing direct filesystem syscalls with no shell invocation.
+
+They are commitments, not coverage. **Production deletion stays disabled until they are un-ignored and passing**, which is the gate this document means.
+
+### Manual data safety gates (not executable in standard CI)
+
+- [ ] **Multi-volume mount boundary:** Verify on macOS with a real external APFS volume or disk image that recursive directory deletion never traverses across a mount point into a second volume (unprivileged CI runners cannot mount physical volumes).
+- [ ] **macOS Finder Trash Put Back:** Verify that restore operations detect occupied destinations and decline overwrite.
+- [ ] **Maintainer threat-model review:** Security review of the classification catalogue and execution revalidation pipeline before production deletion is enabled.
+
 ## Quality
 
 - [ ] Frontend build, tests, formatting, Rust checks, and Rust tests pass.
