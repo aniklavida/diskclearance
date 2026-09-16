@@ -69,9 +69,15 @@ impl ProtectedRootDescriptor {
 
         // 3. Check user home relative prefix
         if let Some(home) = ctx.home_dir {
+            let home_canon = home.canonicalize().unwrap_or_else(|_| home.to_path_buf());
             if let Some(rel) = self.home_relative_prefix {
                 let full = home.join(rel);
-                if ctx.canonical_path.starts_with(&full) || ctx.normalized_path.starts_with(&full) {
+                let full_canon = home_canon.join(rel);
+                if ctx.canonical_path.starts_with(&full)
+                    || ctx.canonical_path.starts_with(&full_canon)
+                    || ctx.normalized_path.starts_with(&full)
+                    || ctx.normalized_path.starts_with(&full_canon)
+                {
                     return true;
                 }
             }
@@ -79,7 +85,12 @@ impl ProtectedRootDescriptor {
             // 4. Check user home relative exact
             if let Some(rel) = self.home_relative_exact {
                 let full = home.join(rel);
-                if ctx.canonical_path == full || ctx.normalized_path == full {
+                let full_canon = home_canon.join(rel);
+                if ctx.canonical_path == full
+                    || ctx.canonical_path == full_canon
+                    || ctx.normalized_path == full
+                    || ctx.normalized_path == full_canon
+                {
                     return true;
                 }
             }
@@ -106,15 +117,18 @@ impl ProtectedRootDescriptor {
                     }
                 }
                 if let Some(home) = ctx.home_dir {
+                    let home_canon = home.canonicalize().unwrap_or_else(|_| home.to_path_buf());
                     if let Some(rel) = self.home_relative_prefix {
                         let full = home.join(rel);
-                        if target.starts_with(&full) {
+                        let full_canon = home_canon.join(rel);
+                        if target.starts_with(&full) || target.starts_with(&full_canon) {
                             return true;
                         }
                     }
                     if let Some(rel) = self.home_relative_exact {
                         let full = home.join(rel);
-                        if target == &full {
+                        let full_canon = home_canon.join(rel);
+                        if target == &full || target == &full_canon {
                             return true;
                         }
                     }
