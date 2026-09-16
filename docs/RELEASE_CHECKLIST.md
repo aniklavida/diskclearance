@@ -17,14 +17,28 @@
 
 ### Automated test coverage
 
-The automated destructive-safety test suite (`src-tauri/src/classify/destructive_safety.rs`) running on hermetic disposable fixtures (`DisposableFixtureTree`) mechanically verifies:
+The destructive-safety suite (`src-tauri/src/classify/destructive_safety.rs`) runs on hermetic disposable fixtures (`DisposableFixtureTree`). Two things are true of it and both matter:
 
-- **Protected-path enforcement:** Every protected root in the rule catalogue is rejected by the plan builder and blocked by pre-execution revalidation.
-- **Symlink escape:** Cache symlinks pointing to source trees, credential stores, or fixture exterior are unlinked without traversing into or mutating targets.
-- **Race and replacement detection:** Path swaps (file replaced by another file, directory replaced by symlink) and same-path/new-inode reallocations are caught and blocked before execution.
-- **Cancellation & partial failure:** Cancellation signals are honored, and partial failures (vanished, permission-denied, protected) produce distinct outcome categories without claiming blanket success.
-- **Hostile filenames:** Paths containing CLI argument flags (`--force`, `-rf`), newlines, leading hyphens, and Unicode characters are handled strictly via direct filesystem syscalls without shell invocation.
-- **Trash totals separation:** Pending-in-Trash bytes and permanently reclaimed bytes are maintained as distinct fields, and moving to Trash reports zero permanently reclaimed space.
+**Running today, on every pull request.** These exercise code that exists:
+
+- **Protected-path enforcement.** Every protected root in the rule catalogue is rejected by the plan builder, and `PlannableClass` has no protected variant, so a plan item cannot carry one at all.
+- **Classification under attack.** Symlinks from a rebuildable cache into a source tree or a credential store, a path replaced between classification and re-read, a cache directory inside a working tree, a credential file named like a cache, a mount boundary crossed mid-rule, and a durable model store that must not be called rebuildable.
+- **Fixture containment.** The harness asserts every path it touches is inside the fixture root, refuses to follow a symlink out of it, and bounds its own walk. Disabling any of those fails a named test.
+
+**Written, committed and deliberately not running.** Eleven tests carry `#[ignore]` naming the execution-engine milestone. They describe behaviour `execute_plan` and the restore path must have and **do not yet have**, because that engine is not written:
+
+- pre-execution revalidation rejecting protected roots and identity changes,
+- deletion removing a symlink without traversing its target,
+- inode reallocation caught where name, size and mtime match,
+- recursive deletion halting at a mount boundary,
+- cancellation leaving neither half-deleted nor double-counted items,
+- partial failure producing one outcome row per item across four categories,
+- a vanished target recorded rather than aborting the batch,
+- Trash mode reporting zero permanently reclaimed bytes,
+- restore declining to clobber an occupied destination,
+- deletion issuing direct filesystem syscalls with no shell invocation.
+
+They are commitments, not coverage. **Production deletion stays disabled until they are un-ignored and passing**, which is the gate this document means.
 
 ### Manual data safety gates (not executable in standard CI)
 
