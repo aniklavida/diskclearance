@@ -116,4 +116,10 @@ Traversal and hashing use bounded concurrency. UI updates are throttled and stre
 
 ## Distribution
 
-Development builds may be unsigned. Public macOS releases require hardened runtime, code signing, notarization, and clean-install verification. Windows packaging and signing begin only after the macOS v1.0 milestone.
+**v1.0 ships unsigned.** Code signing and notarization are _planned_, not implemented: they require an Apple Developer Program membership that does not exist yet. Until it does, a downloaded build is not notarized, and macOS will require the user to right-click → Open, or clear the quarantine attribute, the first time they run it. The README says so plainly.
+
+When signing does arrive, a public macOS release will require hardened runtime, code signing, notarization and clean-install verification. That is a future requirement, not a current property of any build.
+
+**v1.0 is an Apple Silicon build only.** Intel Macs are not supported. A universal build is additive and can be added later without invalidating anything already released.
+
+Windows packaging and signing begin only after the macOS v1.0 milestone.
