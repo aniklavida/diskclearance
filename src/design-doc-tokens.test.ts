@@ -65,29 +65,51 @@ describe("design documents describe the stylesheet that exists", () => {
     let checked = 0;
 
     for (const { name, text } of designDocs()) {
-      // Inline form: `--token` (`#hex`)
+      // Inline form. Three things the first version of this test missed, each
+      // of which let a real hex value through unchecked:
+      //   1. only the FIRST hex was captured, so every `dark` value in the
+      //      `(#light light / #dark dark)` form was never compared;
+      //   2. a token written inside `var(--divider)` did not match;
+      //   3. words between the token and the paren — `--accent` background
+      //      (`#…`) — defeated the anchor.
+      // Ten values in one document escaped all three. They happened to be
+      // correct; nothing would have said so if they were not.
       for (const m of text.matchAll(
-        /`(--[\w-]+)`\s*\(`(#[0-9a-fA-F]{3,8})`/g,
+        /`[^`]*?(--[a-zA-Z][\w-]*)[^`]*`[^(\n]{0,40}\(([^)\n]*#[0-9a-fA-F]{3,8}[^)\n]*)\)/g,
       )) {
-        const [, token, hex] = m;
+        const [, token, tail] = m;
         const l = light.get(token);
         const d = dark.get(token);
         if (l === undefined && d === undefined) {
           wrong.push(`${name}: ${token} is not defined in App.css at all`);
           continue;
         }
-        checked += 1;
-        const v = hex.toLowerCase();
-        if (v !== l && v !== d) {
-          wrong.push(
-            `${name}: ${token} quoted as ${hex}, App.css has light=${l} dark=${d}`,
-          );
+        // Compare every hex in the parenthetical, not just the first, and
+        // honour an explicit light/dark label when one is given.
+        for (const h of tail.matchAll(
+          /(#[0-9a-fA-F]{3,8})(\s*(?:`\s*)?(light|dark))?/g,
+        )) {
+          const hex = h[1].toLowerCase();
+          const label = h[3];
+          checked += 1;
+          const expected = label === "light" ? l : label === "dark" ? d : null;
+          if (expected !== null) {
+            if (hex !== expected) {
+              wrong.push(
+                `${name}: ${token} ${label} quoted as ${h[1]}, App.css has ${expected}`,
+              );
+            }
+          } else if (hex !== l && hex !== d) {
+            wrong.push(
+              `${name}: ${token} quoted as ${h[1]}, App.css has light=${l} dark=${d}`,
+            );
+          }
         }
       }
 
       // Table form: | `--token` | #light | #dark |
       for (const m of text.matchAll(
-        /\|\s*`?(--[\w-]+)`?\s*\|\s*`?(#[0-9a-fA-F]{3,8})`?\s*\|\s*`?(#[0-9a-fA-F]{3,8})`?\s*\|/g,
+        /\|\s*`?(--[a-zA-Z][\w-]*)`?\s*\|\s*`?(#[0-9a-fA-F]{3,8})`?\s*\|\s*`?(#[0-9a-fA-F]{3,8})`?\s*\|/g,
       )) {
         const [, token, lHex, dHex] = m;
         checked += 1;

@@ -95,7 +95,7 @@ A persistent, calm banner spans the top of the Home and Cleanup screens. The ban
 ┌──────────────────────────────────────────────────────────────────────────────────────────────┐
 │ [Brand Mark] DiskClearance                Macintosh HD · 494.20 GB available         [?]     │
 ├──────────────────────────────────────────────────────────────────────────────────────────────┤
-│ 🔒 Standard Access Mode                                                [ Grant Access… ]      │
+│ 🔒 Standard Access Mode                                                [ Grant Access… ]     │
 │    Operating with standard permissions. System caches and sandboxed containers are excluded. │
 │    DiskClearance inspects user build artifacts, caches, and trash without Full Disk Access.  │
 ├──────────────────────────────────────────────────────────────────────────────────────────────┤
@@ -113,7 +113,7 @@ A persistent, calm banner spans the top of the Home and Cleanup screens. The ban
 
 ```text
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│ 🔒 Standard Access Mode                                    [ Grant… ]         │
+│ 🔒 Standard Access Mode                                    [ Grant… ]        │
 │    Operating with standard permissions. System caches and sandboxed          │
 │    containers are excluded from inspection.                                  │
 ├──────────────────────────────────────────────────────────────────────────────┤
@@ -149,7 +149,7 @@ The interface presents an informational callout specifying exact scope boundarie
 ```text
 ┌──────────────────────────────────────────────────────────────────────────────────────────────┐
 │ ℹ Scoped Folder Access Active                                          [ Modify Access… ]    │
-│   DiskClearance has access to 4 authorized folder scopes. Root and container paths are       │
+│   DiskClearance has access to 2 authorized folder scopes. Root and container paths are       │
 │   omitted from analysis. Scanned totals reflect only these authorized directories.           │
 ├──────────────────────────────────────────────────────────────────────────────────────────────┤
 │ Scopes: [✓] ~/Downloads  [✓] ~/Library/Caches  [✕] /Library/Caches  [✕] ~/Library/Containers │
@@ -161,7 +161,7 @@ The interface presents an informational callout specifying exact scope boundarie
 ```text
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │ ℹ Scoped Folder Access Active                              [ Modify… ]       │
-│   Access granted to 4 folder scopes. System paths are omitted.               │
+│   Access granted to 2 folder scopes. System paths are omitted.               │
 │   • Included: ~/Downloads, ~/Library/Caches                                  │
 │   • Omitted:  /Library/Caches, ~/Library/Containers                          │
 └──────────────────────────────────────────────────────────────────────────────┘
@@ -193,7 +193,9 @@ DiskClearance adheres to the following safety behavior:
 ├──────────────────────────────────────────────────────────────────────────────────────────────┤
 │ Scan Status: Completed with restricted scopes                                                │
 │ Verified reclaimable: 3.40 GB (Partial · excludes 3 restricted scopes)                       │
-│ Inaccessible scope:   ~/Library/Containers/com.synthetic.sandbox/Data (Permission denied)    │
+│ Inaccessible scopes:  ~/Library/Containers/com.synthetic.sandbox/Data (Permission denied)    │
+│                       /Library/Caches/com.synthetic.system            (Permission denied)    │
+│                       /private/var/db/synthetic                       (Permission denied)    │
 │                                                                                              │
 │ [ Review 142 Verified Items ]                                   [ Run Fresh Scan ]           │
 └──────────────────────────────────────────────────────────────────────────────────────────────┘
@@ -240,7 +242,7 @@ The view maintains a non-jittering tabular display and provides an immediate, pr
 │ Phase: Scanning build directories and application caches                                     │
 │ Current scope: ~/Library/Caches/com.synthetic.developer/DerivedData                          │
 ├──────────────────────────────────────────────────────────────────────────────────────────────┤
-│ [████████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 42%                      │
+│ [███████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 42%                      │
 │                                                                                              │
 │ Visited items:     18,420 entries                                                            │
 │ Inspected data:    24.18 GB                                                                  │
@@ -256,7 +258,7 @@ The view maintains a non-jittering tabular display and provides an immediate, pr
 │ Phase: Scanning caches (42%)                                                 │
 │ Scope: ~/Library/Caches/com.synthetic.developer/DerivedData                  │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│ [████████████████████░░░░░░░░░░░░░░░░] 42%                                   │
+│ [███████████████░░░░░░░░░░░░░░░░░░░░░] 42%                                   │
 │ Visited: 18,420 entries · Reclaimable: 142 items (3.40 GB)                   │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -492,7 +494,7 @@ When a user navigates to Cleanup but no items were detected or all items have be
 
 #### Copy and reassurance
 
-- Headline: `"No Cleanup Items Found"`
+- Headline: `"Your Mac Is Clean"` — the same headline §2.6 uses, because it is the same state reached by a different route. Two different locked strings for one state is how copy drifts.
 - Subtitle: `"All scanned directories are clear of temporary build outputs, stale caches, and disposable logs."`
 - Primary button: `[ Run New Scan ]`
 
@@ -850,8 +852,8 @@ If the partial scan simply displayed `"Reclaimable: 6.30 GB"`, the user would be
 │ Verified Reclaimable: 6.30 GB (Partial · excludes 2 restricted scopes)                       │
 │ Breakdown: 3.40 GB User Caches · 2.90 GB Developer Data                                      │
 │ Excluded scopes:                                                                             │
-│ 🔒 /Library/Caches             Permission denied (System-wide cache)                          │
-│ 🔒 ~/Library/Containers        Requires Full Disk Access (App sandboxes)                      │
+│ 🔒 /Library/Caches             Permission denied (System-wide cache)                         │
+│ 🔒 ~/Library/Containers        Requires Full Disk Access (App sandboxes)                     │
 │                                                                                              │
 │ Note: Figures reflect only accessible directories. Grant Full Disk Access to scan all.       │
 ├──────────────────────────────────────────────────────────────────────────────────────────────┤
@@ -1011,7 +1013,7 @@ When moving items to Trash or deleting permanently, a non-dismissible modal or d
 │ Moving Items to Trash…                                                  [ Cancel Action ]    │
 │ Target volume: Macintosh HD                                                                  │
 ├──────────────────────────────────────────────────────────────────────────────────────────────┤
-│ [████████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 58%                      │
+│ [██████████████████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░] 58%                      │
 │                                                                                              │
 │ Moving item 25 of 43 items (3.10 GB of 5.50 GB)                                              │
 │ Current target: ~/Library/Caches/com.synthetic.developer/ModuleCache                         │
@@ -1027,7 +1029,7 @@ When moving items to Trash or deleting permanently, a non-dismissible modal or d
 │ Moving Items to Trash…                                     [ Cancel ]        │
 │ Progress: Item 25 of 43 (3.10 GB of 5.50 GB)                                 │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│ [████████████████████░░░░░░░░░░░░░░░░] 58%                                   │
+│ [█████████████████████░░░░░░░░░░░░░░░] 58%                                   │
 │ Current: ~/Library/Caches/com.synthetic.developer/ModuleCache                │
 │ Cancel halts safely between items.                                           │
 └──────────────────────────────────────────────────────────────────────────────┘
@@ -1127,11 +1129,11 @@ The following copy is locked across all non-happy states:
 | **Scan: Cancelled (Body)**       | `"Traversal was halted before checking all scopes. Verified items found before stopping are ready to review."`                                                                                            |
 | **Scan: Failed (Header)**        | `"Scan Failed: Filesystem I/O Error"`                                                                                                                                                                     |
 | **Scan: Failed (Body)**          | `"The scan could not complete because the filesystem reported a read error while traversing the target directory."`                                                                                       |
-| **Scan: Errors (Header)**        | `"Scan Completed with Inaccessible Locations"`                                                                                                                                                            |
+| **Scan: Errors (Header)**        | `"Scan Completed with <n> Inaccessible Locations"` — the count is interpolated, as the mocks render it                                                                                                    |
 | **Scan: Errors (Body)**          | `"Scan finished with inaccessible locations. Totals exclude these skipped directories."`                                                                                                                  |
 | **Empty: Clean Disk (Header)**   | `"Your Mac Is Clean"`                                                                                                                                                                                     |
 | **Empty: Clean Disk (Body)**     | `"No safe cleanup opportunities were found in the scanned scopes. All inspected files are currently active or protected."`                                                                                |
-| **Empty: Filtered (Header)**     | `"No findings match your filters"`                                                                                                                                                                        |
+| **Empty: Filtered (Header)**     | `"No findings match '<filter>'"` — the filter term is interpolated, as the mocks render it                                                                                                                |
 | **Empty: Filtered (Body)**       | `"No items in the current scan match your search term and active filter criteria."`                                                                                                                       |
 | **Empty: Category (Header)**     | `"No Developer or AI Tools Detected"`                                                                                                                                                                     |
 | **Empty: Category (Body)**       | `"Build caches, containers, and local AI model weights were not found on this volume."`                                                                                                                   |
