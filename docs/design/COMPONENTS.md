@@ -11,3 +11,5 @@
 - Permission, empty, partial, cancelled, and error panels.
 
 Components consume typed domain states. They must not infer safety classification from colour, file extension, or path text in the UI.
+
+Detailed specifications for finding rows, groups, classification badges, evidence disclosures, application rows, and the Explore treemap/table pair are locked in `docs/design/FINDING_ROW_AND_TREEMAP.md`.
