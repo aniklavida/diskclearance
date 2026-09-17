@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
-import * as fs from "node:fs";
-import * as path from "node:path";
+// Read the stylesheet from disk rather than importing it: vitest stubs CSS
+// imports, so `./App.css?raw` resolves to an empty string and every token
+// assertion silently passes against nothing.
+//
+// Node's types are suppressed rather than installed, matching what
+// `vite.config.ts` already does for `node:process` — the card asked for no new
+// dependency, and this needs types only, never shipped code.
+// @ts-expect-error type error without @types/node package
+import { readFileSync } from "node:fs";
 
 export function sRGBToLinear(channel: number): number {
   const c = channel / 255;
@@ -125,9 +132,10 @@ describe("WCAG contrast calculation reference checks", () => {
   });
 });
 
+// Relative to the project root, which is where vitest runs.
+const cssContent = readFileSync("src/App.css", "utf-8");
+
 describe("Design tokens and contrast validation", () => {
-  const cssPath = path.resolve(__dirname, "App.css");
-  const cssContent = fs.readFileSync(cssPath, "utf-8");
   const tokens = parseCssTokens(cssContent);
 
   it("does not allow literal hex colors outside token definition blocks in App.css", () => {
