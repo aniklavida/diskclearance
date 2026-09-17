@@ -94,7 +94,7 @@ At `1100 × 720 px`, the review tray renders as a single horizontal toolbar span
 ┌────────────────────────────────────────────────────────────────────────────────────────────┐
 │  43 items selected  │  Ready for Trash: 5.50 GB            │ After Trash empty: 13.90 GB   │
 │  [40 Rebuildable]   │  8.40 GB in Trash · 5.50 GB selected │                               │
-│  [ 3 Review]        │  [Clear selection]                   │        [ Review Selection… ]  │
+│  [ 3 Review]        │  [Clear selection]                   │        [ Move to Trash… ]     │
 └────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -107,7 +107,7 @@ At minimum width (`760 × 560 px`), the tray reflows into a two-row structured b
 │ Ready for Trash: 5.50 GB        │ After Trash empty: 13.90 GB                │
 │ 8.40 GB in Trash · 5.50 GB new  │ (Reclaims disk space only after emptying)  │
 ├─────────────────────────────────┴────────────────────────────────────────────┤
-│ 43 selected (40 Rebuildable, 3 Review)                 [ Review Selection… ] │
+│ 43 selected (40 Rebuildable, 3 Review)                    [ Move to Trash… ] │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -118,7 +118,7 @@ The review tray uses raised surface elevation to delineate itself from the scrol
 - **Surface backdrop:** `--surface-raised` (`#ffffff` light / `#2a3632` dark).
 - **Border top:** 1px solid `--divider` (`#dfe5e2` light / `#2e3a36` dark).
 - **Box shadow:** `0 -4px 16px rgba(0, 0, 0, 0.04)` light / `0 -4px 16px rgba(0, 0, 0, 0.24)` dark.
-- **Primary action button (`Review Selection…`):**
+- **Primary action button (`Move to Trash…`):**
   - Background: `--accent` (`#3f7567` light / `#82b8a8` dark).
   - Text: `#ffffff` light / `#19211f` dark (WCAG AA compliant contrast > 4.5:1).
   - Minimum height: `var(--target-primary)` (`40px`).
@@ -134,7 +134,22 @@ The review tray uses raised surface elevation to delineate itself from the scrol
 
 ### Two non-variant actions
 
-When the user activates `[ Review Selection… ]`, DiskClearance opens a modal confirmation sheet. The sheet presents two choices that are **not** interchangeable visual variants:
+**There is no mode selector, and the two actions are never presented side by side.** A radio pair labelled "Move to Trash / Delete Now" would make permanent destruction one click from the default, inside an otherwise identical sheet — which is exactly what "not variants of one another" forbids. Two actions sharing a layout, a title and a confirmation pattern _are_ variants, whichever control toggles between them.
+
+They are therefore two separate paths, reached differently and shaped differently:
+
+|                  | Move to Trash                                   | Delete Now                                                                                                        |
+| ---------------- | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Entry point      | The tray's primary button, `[ Move to Trash… ]` | The tray's overflow menu (`⋯`), under the heading "Permanently delete…" — never a control adjacent to the primary |
+| Sheet title      | "Move to Trash"                                 | "Permanently delete 43 items"                                                                                     |
+| Layout           | Consequence, storage impact, two buttons        | Adds a required acknowledgment the user must tick before the destructive button enables                           |
+| Initial focus    | `[ Move to Trash ]`                             | `[ Cancel ]`                                                                                                      |
+| `Return` on open | Moves to Trash                                  | Does nothing — the destructive button is not focused and is disabled until acknowledged                           |
+| Red              | none                                            | the acknowledgment row and the destructive button only                                                            |
+
+Reaching Delete Now requires leaving the primary path deliberately. Nothing about it is one keystroke or one click away from the recoverable action.
+
+The two sheets are described below:
 
 1. **Move to Trash (Recoverable — The Default):**
    - Moves files to `~/.Trash` on the same APFS volume.
@@ -148,7 +163,27 @@ When the user activates `[ Review Selection… ]`, DiskClearance opens a modal c
    - States explicitly in copy: _"Files will be deleted immediately and permanently. This action cannot be undone and these files cannot be recovered."_
    - Contains **zero recovery language**: no mention of history restoration or backup recovery.
    - Styled with warning chrome: `--class-irreversible-bg` and `--class-irreversible-fg`.
-   - Requires deliberate selection and an explicit confirmation checkbox gate before the destructive button enables.
+   - Reached only from the tray's overflow menu; requires ticking an acknowledgment before the destructive button enables.
+
+### Colour-blind check: the two actions without hue
+
+The requirement is not that the sheets use accessible colours. It is that a reader who cannot distinguish them can still tell the two actions apart. Because the actions now live in **separate sheets reached by different routes**, hue is not carrying the distinction at all — but the check is worth running explicitly, since an implementer may later be tempted to put them side by side again.
+
+Simulating the two sheets with hue removed entirely (greyscale, which is stricter than deuteranopia or protanopia):
+
+| Signal               | Move to Trash sheet                               | Permanently delete sheet                                            | Survives greyscale?                         |
+| -------------------- | ------------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------- |
+| Sheet title          | "Move to Trash"                                   | "Permanently delete 43 items"                                       | **Yes** — different words                   |
+| Consequence sentence | "Disk space is not freed until Trash is emptied." | "This action cannot be undone and these files cannot be recovered." | **Yes** — different words                   |
+| Warning row          | absent                                            | `⚠ Irreversible Permanent Destruction`, with the glyph              | **Yes** — presence vs absence, plus a glyph |
+| Acknowledgment       | absent                                            | a checkbox the user must tick                                       | **Yes** — an extra control, not a shade     |
+| Destructive button   | `[ Move to Trash ]`                               | `[ Delete Now Permanently ]`                                        | **Yes** — different label                   |
+| Initial focus ring   | on the confirm button                             | on `[ Cancel ]`                                                     | **Yes** — position, not colour              |
+| Button fill          | accent                                            | `--class-irreversible-bg`                                           | **No** — both read as mid-grey              |
+
+Only the last row depends on hue, and every other row above it carries the distinction on its own. A deuteranope, a protanope and a greyscale reader all see: a different title, a different sentence, an extra warning line, an extra control they must operate, a differently worded button, and the focus starting somewhere else.
+
+**The test to apply when changing these sheets:** screenshot both, desaturate, and check that a reader can still say which one destroys files. If the answer depends on the button fill, the change has broken this.
 
 ### Stating consequence in words, not button colour
 
@@ -162,10 +197,7 @@ In accordance with `docs/design/ACCESSIBILITY.md`, safety status and consequence
 
 ```text
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
-│ Review Deletion Plan                                                        [Close ✕]  │
-├────────────────────────────────────────────────────────────────────────────────────────┤
-│ Operation Mode:                                                                        │
-│   (●) Move to Trash (Recoverable)          ( ) Delete Now (Permanently Irreversible)   │
+│ Move to Trash                                                               [Close ✕]  │
 ├────────────────────────────────────────────────────────────────────────────────────────┤
 │ Target Scope: 43 items selected                                                        │
 │ • Rebuildable items: 40 items (3.50 GB)                                                │
@@ -188,9 +220,7 @@ In accordance with `docs/design/ACCESSIBILITY.md`, safety status and consequence
 
 ```text
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│ Review Deletion Plan                                                [Close ✕]│
-├──────────────────────────────────────────────────────────────────────────────┤
-│ Mode: (●) Move to Trash (Recoverable)   ( ) Delete Now (Irreversible)        │
+│ Move to Trash                                                       [Close ✕]│
 ├──────────────────────────────────────────────────────────────────────────────┤
 │ Selection: 43 items (40 Rebuildable, 3 Review)                               │
 │                                                                              │
@@ -206,14 +236,11 @@ In accordance with `docs/design/ACCESSIBILITY.md`, safety status and consequence
 
 ### Visual layout: Delete Now (Irreversible) — 1100 × 720 px
 
-When the user selects the `Delete Now` mode selector, the sheet shifts into the irreversible destruction state. Red appears on this surface because destruction is permanent:
+Reached only from the tray's overflow menu, never from the Trash sheet. This is a different sheet, not a state of the previous one. Red appears here, and nowhere else in the flow, because destruction is permanent:
 
 ```text
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
-│ Review Deletion Plan                                                        [Close ✕]  │
-├────────────────────────────────────────────────────────────────────────────────────────┤
-│ Operation Mode:                                                                        │
-│   ( ) Move to Trash (Recoverable)          (●) Delete Now (Permanently Irreversible)   │
+│ Permanently delete 43 items                                                 [Close ✕]  │
 ├────────────────────────────────────────────────────────────────────────────────────────┤
 │ ⚠ Irreversible Permanent Destruction                                                   │
 │                                                                                        │
@@ -240,9 +267,7 @@ _Note on button state:_ The `[ Delete Now Permanently ]` button is rendered in d
 
 ```text
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│ Review Deletion Plan                                                [Close ✕]│
-├──────────────────────────────────────────────────────────────────────────────┤
-│ Mode: ( ) Move to Trash (Recoverable)   (●) Delete Now (Irreversible)        │
+│ Permanently delete 43 items                                         [Close ✕]│
 ├──────────────────────────────────────────────────────────────────────────────┤
 │ ⚠ Irreversible Permanent Destruction                                         │
 │                                                                              │
