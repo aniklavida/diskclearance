@@ -21,7 +21,7 @@ type Palette = { light: Map<string, string>; dark: Map<string, string> };
 
 const DARK_AT = "@media (prefers-color-scheme: dark)";
 
-function readTokens(css: string, block: string): Map<string, string> {
+function readTokens(block: string): Map<string, string> {
   const out = new Map<string, string>();
   for (const m of block.matchAll(/(--[\w-]+)\s*:\s*(#[0-9a-fA-F]{3,8})/g)) {
     out.set(m[1], m[2].toLowerCase());
@@ -37,8 +37,8 @@ function palette(): Palette {
     `App.css must contain "${DARK_AT}" for a dark palette to exist`,
   ).toBeGreaterThan(-1);
   return {
-    light: readTokens(css, css.slice(0, at)),
-    dark: readTokens(css, css.slice(at)),
+    light: readTokens(css.slice(0, at)),
+    dark: readTokens(css.slice(at)),
   };
 }
 
