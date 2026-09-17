@@ -37,9 +37,11 @@ DiskClearance supports macOS 13 Ventura and later across two canonical window si
 ### Step 1: Welcome
 
 #### Purpose
+
 Establish immediate reassurance in a single sentence: DiskClearance inspects storage and removes nothing on its own. It is neither a feature tour nor an onboarding pitch.
 
 #### Visual layout (760 × 560 px)
+
 ```text
 ┌────────────────────────────────────────────────────────────────────────────┐
 │ [● ● ●] DiskClearance                                                      │
@@ -61,6 +63,7 @@ Establish immediate reassurance in a single sentence: DiskClearance inspects sto
 ```
 
 #### Visual layout (1100 × 720 px)
+
 ```text
 ┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
 │ [● ● ●] DiskClearance                                                                            │
@@ -82,6 +85,7 @@ Establish immediate reassurance in a single sentence: DiskClearance inspects sto
 ```
 
 #### Styling and tokens
+
 - **Surface:** `--window` (`#f4f2ec` light / `#19211f` dark).
 - **Status pill:**
   - Light: background `--accent-soft` (`#dce9e3`), foreground `--accent-fg` (`#24483e`).
@@ -105,9 +109,11 @@ Establish immediate reassurance in a single sentence: DiskClearance inspects sto
 ### Step 2: Scan Mac
 
 #### Purpose
+
 Provide a single, uncluttered primary action. No scope pickers, no checkbox matrices, and no advanced settings disclosures competing for attention.
 
 #### Visual layout (760 × 560 px)
+
 ```text
 ┌────────────────────────────────────────────────────────────────────────────┐
 │ [● ● ●] DiskClearance                                                      │
@@ -132,6 +138,7 @@ Provide a single, uncluttered primary action. No scope pickers, no checkbox matr
 ```
 
 #### Visual layout (1100 × 720 px)
+
 ```text
 ┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
 │ [● ● ●] DiskClearance                                                                            │
@@ -157,6 +164,7 @@ Provide a single, uncluttered primary action. No scope pickers, no checkbox matr
 ```
 
 #### Styling and tokens
+
 - **Drive capacity card:**
   - Background: `--surface` (`#faf9f5` light / `#222c29` dark).
   - Border: 1px solid `--divider` (`#dfe5e2` light / `#2e3a36` dark).
@@ -173,10 +181,13 @@ Provide a single, uncluttered primary action. No scope pickers, no checkbox matr
 ### Step 3: Contextual permission
 
 #### Purpose
+
 Permissions are requested **only when an active scan scope strictly requires them**, never at initial application launch. The dialog explains both sides honestly: what access allows, and what the application continues to inspect without it.
 
 #### Visual layout at minimum window (760 × 560 px)
+
 In the 760 × 560 px window, the permission explanation renders as a centered overlay sheet with reduced margin:
+
 ```text
 ┌────────────────────────────────────────────────────────────────────────────┐
 │ [● ● ●] DiskClearance                                                      │
@@ -205,7 +216,9 @@ In the 760 × 560 px window, the permission explanation renders as a centered ov
 ```
 
 #### Visual layout at common window (1100 × 720 px)
+
 In the 1100 × 720 px window, the sheet is centered over the dim backdrop of the Home view, allowing surrounding context to remain faintly visible:
+
 ```text
 ┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
 │ [● ● ●] DiskClearance                                                                            │
@@ -239,6 +252,7 @@ In the 1100 × 720 px window, the sheet is centered over the dim backdrop of the
 ```
 
 #### Styling and tokens
+
 - **Overlay backdrop:** `rgba(0, 0, 0, 0.4)` light, `rgba(0, 0, 0, 0.65)` dark.
 - **Sheet surface:**
   - Light: background `--surface-raised` (`#ffffff`), border 1px solid `--divider` (`#dfe5e2`), shadow `--card-shadow` (`0 18px 50px rgba(49, 71, 64, 0.08)`).
@@ -259,9 +273,11 @@ In the 1100 × 720 px window, the sheet is centered over the dim backdrop of the
 ### Step 4: Streaming results
 
 #### Purpose
+
 Provide truthful, calm progress reporting: current traversal phase, active filesystem scope, and verified items found. Cancellation is immediate, thread-safe, and retains all verified findings without discarding work.
 
 #### Visual layout at minimum window (760 × 560 px)
+
 ```text
 ┌────────────────────────────────────────────────────────────────────────────┐
 │ [● ● ●] DiskClearance                                                      │
@@ -287,6 +303,7 @@ Provide truthful, calm progress reporting: current traversal phase, active files
 ```
 
 #### Visual layout at common window (1100 × 720 px)
+
 ```text
 ┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
 │ [● ● ●] DiskClearance                                                                            │
@@ -312,6 +329,7 @@ Provide truthful, calm progress reporting: current traversal phase, active files
 ```
 
 #### Styling and tokens
+
 - **Progress track and bar:**
   - Track: background `--divider` (`#dfe5e2` light / `#2e3a36` dark).
   - Fill: background `--accent` (`#3f7567` light / `#82b8a8` dark).
@@ -335,7 +353,9 @@ Provide truthful, calm progress reporting: current traversal phase, active files
 ### Step 5: Three calm sections
 
 #### Purpose
+
 Present the scan results cleanly structured into three distinct safety categories:
+
 1. **Ready to clear** (rebuildable caches, disposable build artifacts).
 2. **Needs your review** (duplicates, orphan app support, uncertain related files).
 3. **Protected** (system core, configuration files, active application bundles).
@@ -343,6 +363,7 @@ Present the scan results cleanly structured into three distinct safety categorie
 Their visual order and weight emphasize safety and reassurance, avoiding an alarming wall of items.
 
 #### Visual layout at minimum window (760 × 560 px)
+
 ```text
 ┌────────────────────────────────────────────────────────────────────────────┐
 │ [● ● ●] DiskClearance                                                      │
@@ -372,6 +393,7 @@ Their visual order and weight emphasize safety and reassurance, avoiding an alar
 ```
 
 #### Visual layout at common window (1100 × 720 px)
+
 ```text
 ┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
 │ [● ● ●] DiskClearance                                                                            │
@@ -406,22 +428,25 @@ Their visual order and weight emphasize safety and reassurance, avoiding an alar
 ```
 
 #### Safety class token assignment
+
 From `src/App.css`:
 
-| Section | Tokens (Light) | Tokens (Dark) | Visual Cue | Selection Default |
-|---|---|---|---|---|
-| **Ready to clear** | bg: `--class-rebuildable-bg` (`#daf0e4`)<br>fg: `--class-rebuildable-fg` (`#164e3a`) | bg: `--class-rebuildable-bg` (`#1e3b2e`)<br>fg: `--class-rebuildable-fg` (`#8ce4bd`) | Soft green badge + "Rebuildable" tag + checkable | Checked by default |
-| **Needs your review** | bg: `--class-review-bg` (`#faecc6`)<br>fg: `--class-review-fg` (`#5c3e00`) | bg: `--class-review-bg` (`#382b13`)<br>fg: `--class-review-fg` (`#ffd78a`) | Amber badge + "Review" tag + warning cue | **Never** checked by default |
-| **Protected** | bg: `--class-protected-bg` (`#e1e6e5`)<br>fg: `--class-protected-fg` (`#283632`) | bg: `--class-protected-bg` (`#26302e`)<br>fg: `--class-protected-fg` (`#ccd5d1`) | Neutral slate badge + lock icon + "Protected" | **Disabled / Uncheckable** |
+| Section               | Tokens (Light)                                                                       | Tokens (Dark)                                                                        | Visual Cue                                       | Selection Default            |
+| --------------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ | ------------------------------------------------ | ---------------------------- |
+| **Ready to clear**    | bg: `--class-rebuildable-bg` (`#daf0e4`)<br>fg: `--class-rebuildable-fg` (`#164e3a`) | bg: `--class-rebuildable-bg` (`#1e3b2e`)<br>fg: `--class-rebuildable-fg` (`#8ce4bd`) | Soft green badge + "Rebuildable" tag + checkable | Checked by default           |
+| **Needs your review** | bg: `--class-review-bg` (`#faecc6`)<br>fg: `--class-review-fg` (`#5c3e00`)           | bg: `--class-review-bg` (`#382b13`)<br>fg: `--class-review-fg` (`#ffd78a`)           | Amber badge + "Review" tag + warning cue         | **Never** checked by default |
+| **Protected**         | bg: `--class-protected-bg` (`#e1e6e5`)<br>fg: `--class-protected-fg` (`#283632`)     | bg: `--class-protected-bg` (`#26302e`)<br>fg: `--class-protected-fg` (`#ccd5d1`)     | Neutral slate badge + lock icon + "Protected"    | **Disabled / Uncheckable**   |
 
 ---
 
 ### Step 6: Review
 
 #### Purpose
+
 Allow the user to inspect the planned operation with complete transparency. Items uncertain or marked as Review remain unselected unless explicitly toggled by the user.
 
 #### Visual layout at minimum window (760 × 560 px)
+
 ```text
 ┌────────────────────────────────────────────────────────────────────────────┐
 │ [● ● ●] DiskClearance                                                      │
@@ -447,6 +472,7 @@ Allow the user to inspect the planned operation with complete transparency. Item
 ```
 
 #### Visual layout at common window (1100 × 720 px)
+
 ```text
 ┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
 │ [● ● ●] DiskClearance                                                                            │
@@ -478,6 +504,7 @@ Allow the user to inspect the planned operation with complete transparency. Item
 ```
 
 #### Styling and tokens
+
 - **Action selection tray:**
   - Border-top: 1px solid `--divider`. Background: `--surface-raised`.
   - Padding: `--space-16` `--space-24`.
@@ -491,9 +518,11 @@ Allow the user to inspect the planned operation with complete transparency. Item
 ### Step 7: Honest completion
 
 #### Purpose
+
 Transparently report what changed, what was moved to Trash (which does not free disk space until emptied), and any errors or skipped files.
 
 #### Visual layout at minimum window (760 × 560 px)
+
 ```text
 ┌────────────────────────────────────────────────────────────────────────────┐
 │ [● ● ●] DiskClearance                                                      │
@@ -519,6 +548,7 @@ Transparently report what changed, what was moved to Trash (which does not free 
 ```
 
 #### Visual layout at common window (1100 × 720 px)
+
 ```text
 ┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
 │ [● ● ●] DiskClearance                                                                            │
@@ -547,6 +577,7 @@ Transparently report what changed, what was moved to Trash (which does not free 
 ```
 
 #### Styling and tokens
+
 - **Summary card:**
   - Border: 1px solid `--divider`.
   - Background: `--surface`.
@@ -561,10 +592,11 @@ Transparently report what changed, what was moved to Trash (which does not free 
 ## The two summary figures
 
 The two storage figures must never be combined into a single hopeful headline:
-1. **Ready to move to Trash** (or *Items moved to Trash*): Space occupied by items that will be placed into the macOS Trash folder.
+
+1. **Ready to move to Trash** (or _Items moved to Trash_): Space occupied by items that will be placed into the macOS Trash folder.
 2. **Space available after Trash is emptied**: The real disk space that will be reclaimed once the user empties Trash.
 
-Both figures explicitly qualify coverage whenever access is incomplete (e.g., *"At least 3.40 GB, from the 84% of your disk we could read"*).
+Both figures explicitly qualify coverage whenever access is incomplete (e.g., _"At least 3.40 GB, from the 84% of your disk we could read"_).
 
 ---
 
@@ -580,16 +612,16 @@ Every user-facing string in the first-run flow is locked below in quotation mark
   - `"See what goes. Keep what matters."`
 - **Reassurance body sentence:**
   - Primary recommendation: `"A scan inspects disk usage and removes nothing."`
-    - *Rationale:* Concise, unambiguous, and immediately removes the anxiety of accidental deletion before the user even begins.
+    - _Rationale:_ Concise, unambiguous, and immediately removes the anxiety of accidental deletion before the user even begins.
   - Evaluated alternative: `"DiskClearance examines your storage to find safe cleanup opportunities, without altering any files."`
-    - *Comparison:* The alternative introduces unnecessary cleaner jargon ("cleanup opportunities") and dilutes the core safety promise.
+    - _Comparison:_ The alternative introduces unnecessary cleaner jargon ("cleanup opportunities") and dilutes the core safety promise.
 - **Secondary caption / note:**
   - `"All analysis stays local. Nothing is deleted without your confirmation."`
 - **Primary action button:**
   - Primary recommendation: `"Continue"`
-    - *Rationale:* Standard calm macOS onboarding progression.
+    - _Rationale:_ Standard calm macOS onboarding progression.
   - Evaluated alternative: `"Get Started"`
-    - *Comparison:* "Get Started" sounds like an account setup or marketing wizard.
+    - _Comparison:_ "Get Started" sounds like an account setup or marketing wizard.
 
 ---
 
@@ -606,9 +638,9 @@ Every user-facing string in the first-run flow is locked below in quotation mark
   - Subtitle: `"System, developer caches, and user data"`
 - **Primary action button:**
   - Primary recommendation: `"Scan Mac"`
-    - *Rationale:* Active, decisive, and sets clear scope without unnecessary words.
+    - _Rationale:_ Active, decisive, and sets clear scope without unnecessary words.
   - Evaluated alternative: `"Start Scan"`
-    - *Comparison:* "Scan Mac" grounds the action in the device context and feels more native on macOS.
+    - _Comparison:_ "Scan Mac" grounds the action in the device context and feels more native on macOS.
 - **Footnote / safety reminder:**
   - `"Read-only inspection. Traversal runs at background priority and alters no files."`
 
@@ -638,9 +670,9 @@ Every user-facing string in the first-run flow is locked below in quotation mark
   - `"Open System Settings"`
 - **Secondary action button:**
   - Primary recommendation: `"Continue with limited scan"`
-    - *Rationale:* Plainly tells the user that the scan will proceed immediately with whatever permissions they already have.
+    - _Rationale:_ Plainly tells the user that the scan will proceed immediately with whatever permissions they already have.
   - Evaluated alternative: `"Skip for now"`
-    - *Comparison:* "Skip for now" fails to clarify that the scan will still proceed and still be genuinely useful.
+    - _Comparison:_ "Skip for now" fails to clarify that the scan will still proceed and still be genuinely useful.
 
 ---
 
@@ -674,6 +706,7 @@ Every user-facing string in the first-run flow is locked below in quotation mark
 ### Step 5: Three calm sections
 
 #### Summary header & coverage qualification
+
 - **Summary header:**
   - `"Scan results"`
 - **Full coverage badge:**
@@ -682,6 +715,7 @@ Every user-facing string in the first-run flow is locked below in quotation mark
   - `"At least {reclaimable_size}, from the {coverage_pct}% of your disk we could read"` (e.g., `"At least 3.40 GB, from the 84% of your disk we could read"`)
 
 #### Summary figure 1: Ready to move to Trash
+
 - **Label:**
   - `"Ready to move to Trash"`
 - **Quantity format:**
@@ -690,6 +724,7 @@ Every user-facing string in the first-run flow is locked below in quotation mark
   - `"Items moved to Trash remain restorable until you empty Trash in Finder."`
 
 #### Summary figure 2: Space available after Trash is emptied
+
 - **Label:**
   - `"Space available after Trash is emptied"`
 - **Quantity format:**
@@ -698,6 +733,7 @@ Every user-facing string in the first-run flow is locked below in quotation mark
   - `"Disk capacity increases only after Trash is emptied in macOS Finder."`
 
 #### Section 1: Ready to clear
+
 - **Section title:**
   - `"Ready to clear"`
 - **Category badge text:**
@@ -711,6 +747,7 @@ Every user-facing string in the first-run flow is locked below in quotation mark
   - Subtitle: `"Your application and developer caches are already tidy."`
 
 #### Section 2: Needs your review
+
 - **Section title:**
   - `"Needs your review"`
 - **Category badge text:**
@@ -724,6 +761,7 @@ Every user-facing string in the first-run flow is locked below in quotation mark
   - Subtitle: `"No duplicate files or orphan application data were detected."`
 
 #### Section 3: Protected
+
 - **Section title:**
   - `"Protected"`
 - **Category badge text:**
@@ -736,6 +774,7 @@ Every user-facing string in the first-run flow is locked below in quotation mark
   - `"{size} protected by safety policy ({count} items)"` (e.g., `"48.20 GB protected by safety policy (1,420 items)"`)
 
 #### Primary review action button
+
 - **Button label:**
   - `"Review selection ({selected_size})"` (e.g., `"Review selection (3.40 GB)"`)
 - **Disabled state label (when 0 items selected):**
@@ -767,6 +806,7 @@ Every user-facing string in the first-run flow is locked below in quotation mark
   - Irreversible secondary button: `"Delete Now (Irreversible)"`
 
 #### Destructive modal: Delete Now confirmation
+
 - **Dialog heading:**
   - `"Permanently delete {count} items?"`
 - **Warning text:**
@@ -781,6 +821,7 @@ Every user-facing string in the first-run flow is locked below in quotation mark
 ### Step 7: Honest completion
 
 #### Variant A: Standard Trash cleanup (Default path)
+
 - **Screen navigation context:**
   - `"History > Operation record"`
 - **Heading (h2):**
@@ -803,6 +844,7 @@ Every user-facing string in the first-run flow is locked below in quotation mark
   - Primary: `"Done"`
 
 #### Variant B: Permanent deletion (Delete Now path)
+
 - **Screen navigation context:**
   - `"History > Operation record"`
 - **Heading (h2):**
@@ -823,6 +865,7 @@ Every user-facing string in the first-run flow is locked below in quotation mark
   - Primary: `"Done"`
 
 #### Variant C: Partial failure or skipped items
+
 - **Heading (h2):**
   - `"Cleanup completed with warnings"`
 - **Subheading / primary result:**
@@ -846,16 +889,19 @@ A critical failure mode in Mac storage tools is showing a single oversized numbe
 To ensure they are distinguishable **without reading the labels**, the design enforces three structural differentiators:
 
 ### 1. Spatial separation and physical container hierarchy
-- **Ready to move to Trash** is an *action-bound staging figure*. It lives directly inside the interactive review and action controls (the floating action tray at the bottom of the viewport or adjacent to the primary action button). It moves with the user's immediate selection.
-- **Space available after Trash is emptied** is a *system-bound volume figure*. It lives exclusively inside the drive storage overview card at the top of the screen, visually locked to the Macintosh HD capacity bar.
+
+- **Ready to move to Trash** is an _action-bound staging figure_. It lives directly inside the interactive review and action controls (the floating action tray at the bottom of the viewport or adjacent to the primary action button). It moves with the user's immediate selection.
+- **Space available after Trash is emptied** is a _system-bound volume figure_. It lives exclusively inside the drive storage overview card at the top of the screen, visually locked to the Macintosh HD capacity bar.
 
 A person looking at the screen immediately perceives one number as belonging to the files on their tray, and the other as belonging to the persistent disk drive.
 
 ### 2. Iconographic and glyph cues
+
 - **Ready to move to Trash** is always preceded by the macOS **Trash glyph** (a wireframe wastebasket) rendered in `--text-secondary`.
 - **Space available after Trash is emptied** is always preceded by a **Drive Volume glyph** (a hardware disk icon with an outward reclaim arrow) or rendered directly inside a capacity bar gauge.
 
 ### 3. Visual weight, typography, and token contrast
+
 - **Ready to move to Trash**:
   - Rendered in bold tabular numbers (`font-weight: 700; font-size: 20px;`).
   - Uses the soft rebuildable accent tint: background `--class-rebuildable-bg`, text `--class-rebuildable-fg`.
@@ -890,7 +936,9 @@ Two rules follow, and they matter more than the layout:
 When the Trash is genuinely empty, the second line is omitted and the two figures match. Showing the same value twice is honest there; it is the explanation that must not be.
 
 ### Truthful handling of partial coverage
+
 Whenever permissions prevent complete traversal of the disk (the standard macOS state), neither figure is presented as a confident exact total.
+
 - The headline figure is prefixed with a mathematical lower-bound indicator: `"At least 3.40 GB"`.
 - It is immediately paired with the coverage qualification token badge:
   ```text
@@ -944,6 +992,7 @@ On macOS, running without Full Disk Access (FDA) is the **common default case**,
 ```
 
 ### Visual layout of the permission-limited results screen (1100 × 720 px)
+
 ```text
 ┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
 │ [● ● ●] DiskClearance                                                                            │
@@ -981,6 +1030,7 @@ On macOS, running without Full Disk Access (FDA) is the **common default case**,
 ```
 
 ### Key principles of the permission-limited flow
+
 1. **Never nag or block:** If the user selects "Continue with limited scan", the application will never prompt them again during the current scan session.
 2. **Truthful bounding:** All totals are labeled as lower bounds (`"At least…"`). The app never guesses or extrapolates what might be inside unread directories.
 3. **Graceful in-line recovery:** An inline affordance (`[Open System Settings to expand coverage]`) allows the user to grant permissions later if they wish. When granted, the app re-scans only the previously skipped scopes and merges the results without restarting from scratch.
@@ -995,16 +1045,16 @@ Reduced motion in DiskClearance does not merely remove CSS timing functions; it 
 
 ### Component-by-component animation mapping
 
-| Component / Action | Standard Motion Experience | Reduced Motion Experience | Rationale |
-|---|---|---|---|
-| **Window & View Transitions** | 180ms ease-out opacity fade and 4px vertical slide | Instantaneous cut (0ms transition) | Eliminates spatial displacement and perceived lag |
-| **Scan Progress Bar** | Continuously animated CSS width fill with subtle shimmer | Discrete stepped width changes without smoothing; shimmer animation disabled | Continuous linear motion and shimmering can trigger vestibular distress |
-| **Scan Progress Spinner** | Rotating indeterminate circular spinner | Static status glyph + tabular percentage readout (`"Scanning… 62%"`) | Constant circular rotation is removed |
-| **Item Count & Size Tickers** | Rapidly counting numeric odometer effect | Discrete updates locked to `font-variant-numeric: tabular-nums` | Prevents continuous flashing and number flickering |
-| **Section Accordions** (`Ready to clear`, `Protected`) | 200ms ease-out expand/collapse of container height | Instant toggle between expanded and collapsed states | Avoids large reflows and moving viewport boundaries |
-| **Review Tray Appearance** | Smooth vertical slide-up from bottom (`translateY(100%)` to `translateY(0)`) | Fixed static position or immediate cut-in | Eliminates movement across the reading field |
-| **Contextual Permission Sheet & Modals** | 200ms scale-up (`scale(0.96)` to `scale(1)`) and fade-in | Immediate visibility without scaling or opacity blending | Scaling modals trigger depth distortion |
-| **Deletion Progress Indicator** | Continuous sweep progress bar | Stepped block progress bar with exact item count (`"Processed 3 of 12 items"`) | Replaces continuous sweep with factual discrete counts |
+| Component / Action                                     | Standard Motion Experience                                                   | Reduced Motion Experience                                                      | Rationale                                                               |
+| ------------------------------------------------------ | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
+| **Window & View Transitions**                          | 180ms ease-out opacity fade and 4px vertical slide                           | Instantaneous cut (0ms transition)                                             | Eliminates spatial displacement and perceived lag                       |
+| **Scan Progress Bar**                                  | Continuously animated CSS width fill with subtle shimmer                     | Discrete stepped width changes without smoothing; shimmer animation disabled   | Continuous linear motion and shimmering can trigger vestibular distress |
+| **Scan Progress Spinner**                              | Rotating indeterminate circular spinner                                      | Static status glyph + tabular percentage readout (`"Scanning… 62%"`)           | Constant circular rotation is removed                                   |
+| **Item Count & Size Tickers**                          | Rapidly counting numeric odometer effect                                     | Discrete updates locked to `font-variant-numeric: tabular-nums`                | Prevents continuous flashing and number flickering                      |
+| **Section Accordions** (`Ready to clear`, `Protected`) | 200ms ease-out expand/collapse of container height                           | Instant toggle between expanded and collapsed states                           | Avoids large reflows and moving viewport boundaries                     |
+| **Review Tray Appearance**                             | Smooth vertical slide-up from bottom (`translateY(100%)` to `translateY(0)`) | Fixed static position or immediate cut-in                                      | Eliminates movement across the reading field                            |
+| **Contextual Permission Sheet & Modals**               | 200ms scale-up (`scale(0.96)` to `scale(1)`) and fade-in                     | Immediate visibility without scaling or opacity blending                       | Scaling modals trigger depth distortion                                 |
+| **Deletion Progress Indicator**                        | Continuous sweep progress bar                                                | Stepped block progress bar with exact item count (`"Processed 3 of 12 items"`) | Replaces continuous sweep with factual discrete counts                  |
 
 ### CSS implementation pattern
 
@@ -1046,5 +1096,3 @@ The application enforces these rules via global stylesheet directives:
   }
 }
 ```
-
-
