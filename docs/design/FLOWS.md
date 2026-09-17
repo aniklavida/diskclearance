@@ -4,6 +4,8 @@
 
 Welcome → Scan Mac → request only required permission → stream verified results → Ready to clear / Needs your review / Protected → review plan → Move to Trash or Delete Now → completion.
 
+Detailed screen layouts, copy catalogue, permission-limited flows, and reduced motion specifications are locked in `docs/design/FIRST_RUN.md`.
+
 ## Safe action
 
 Select findings → inspect evidence → build immutable plan → show recoverability and totals → confirm → revalidate each target → execute per item → store outcomes → show reclaimed versus pending-in-Trash space.

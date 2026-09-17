@@ -837,3 +837,190 @@ Every user-facing string in the first-run flow is locked below in quotation mark
   - Secondary: `"View audit log"`
   - Primary: `"Done"`
 
+---
+
+## The two summary figures: visual distinction without reading labels
+
+A critical failure mode in Mac storage tools is showing a single oversized number that conflates items placed into the Trash with immediately freed disk space. DiskClearance strictly treats **Ready to move to Trash** and **Space available after Trash is emptied** as two distinct physical concepts.
+
+To ensure they are distinguishable **without reading the labels**, the design enforces three structural differentiators:
+
+### 1. Spatial separation and physical container hierarchy
+- **Ready to move to Trash** is an *action-bound staging figure*. It lives directly inside the interactive review and action controls (the floating action tray at the bottom of the viewport or adjacent to the primary action button). It moves with the user's immediate selection.
+- **Space available after Trash is emptied** is a *system-bound volume figure*. It lives exclusively inside the drive storage overview card at the top of the screen, visually locked to the Macintosh HD capacity bar.
+
+A person looking at the screen immediately perceives one number as belonging to the files on their tray, and the other as belonging to the persistent disk drive.
+
+### 2. Iconographic and glyph cues
+- **Ready to move to Trash** is always preceded by the macOS **Trash glyph** (a wireframe wastebasket) rendered in `--text-secondary`.
+- **Space available after Trash is emptied** is always preceded by a **Drive Volume glyph** (a hardware disk icon with an outward reclaim arrow) or rendered directly inside a capacity bar gauge.
+
+### 3. Visual weight, typography, and token contrast
+- **Ready to move to Trash**:
+  - Rendered in bold tabular numbers (`font-weight: 700; font-size: 20px;`).
+  - Uses the soft rebuildable accent tint: background `--class-rebuildable-bg`, text `--class-rebuildable-fg`.
+  - Accompanied by a count pill (e.g. `2 items`) indicating it is a collection of discrete files.
+- **Space available after Trash is emptied**:
+  - Rendered in neutral secondary typography (`font-weight: 500; font-size: 14px;`).
+  - Uses `--text-secondary` with a subtle dashed underline or parenthetical condition `(after emptying Trash)`.
+  - Never styled with action buttons or green accent tints, preventing the false belief that clicking "Move to Trash" instantly expands free space on the drive.
+
+### Truthful handling of partial coverage
+Whenever permissions prevent complete traversal of the disk (the standard macOS state), neither figure is presented as a confident exact total.
+- The headline figure is prefixed with a mathematical lower-bound indicator: `"At least 3.40 GB"`.
+- It is immediately paired with the coverage qualification token badge:
+  ```text
+  ┌────────────────────────────────────────────────────────────────────────┐
+  │ [!] At least 3.40 GB, from the 84% of your disk we could read         │
+  └────────────────────────────────────────────────────────────────────────┘
+  ```
+- The coverage percentage is calculated as `(scanned_bytes / total_used_bytes) * 100`, rounded down to avoid overstating coverage.
+- If coverage is incomplete, an info pill using `--class-review-bg` and `--class-review-fg` explicitly informs the user: `"Standard coverage · Container and root caches not inspected"`.
+
+---
+
+## The permission-limited first run: primary macOS experience
+
+On macOS, running without Full Disk Access (FDA) is the **common default case**, not an edge-case failure. Designing only the fully-privileged path results in brittle, intimidating experiences. DiskClearance treats standard permissions as a first-class, fully capable operating mode.
+
+### User journey in standard permissions
+
+```text
+[Launch App]
+     │
+     ▼
+[Step 1: Welcome] ──► Explains read-only nature
+     │
+     ▼
+[Step 2: Scan Mac] ──► Starts scan with standard user scope
+     │
+     ▼
+[Scope Inspection] ──► Encounters protected paths (~/Library/Containers, Xcode simulators)
+     │
+     ├─────────────────────────────────────────┐
+     ▼                                         ▼
+[Step 3: Contextual Permission Sheet]     [User chooses "Continue with limited scan"]
+     │                                         │
+     ▼                                         ▼
+[Step 4: Streaming Results] ◄──────────────────┘
+  • Inaccessible paths recorded calmly as skipped (e.g. "3 paths skipped safely")
+  • No alarming red banners or system crash alerts
+     │
+     ▼
+[Step 5: Results & Three Calm Sections]
+  • Coverage badge: "At least 3.40 GB, from the 84% of your disk we could read"
+  • Info banner: "Standard permission scope. Container caches were skipped."
+  • Ready to clear shows verified user-level caches (~/Library/Caches)
+     │
+     ▼
+[Step 6: Review] ──► Clear action on verified items only
+     │
+     ▼
+[Step 7: Completion] ──► Explains exactly what was moved to Trash, noting standard scope
+```
+
+### Visual layout of the permission-limited results screen (1100 × 720 px)
+```text
+┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ [● ● ●] DiskClearance                                                                            │
+├──────────────────────┬───────────────────────────────────────────────────────────────────────────┤
+│ [Brand Mark]         │  Cleanup > Scan results                                                   │
+│ DiskClearance        │                                                                           │
+│                      │  ┌── Storage Overview (Standard Permission Scope) ─────────────────────┐  │
+│ • Home               │  │ Macintosh HD: 245.2 GB used of 494.4 GB                                │  │
+│ • Cleanup (active)   │  │ [Coverage: 84% read] At least 3.40 GB can be cleared                   │  │
+│ • Explore            │  │ Space available after Trash is emptied: at least 3.40 GB               │  │
+│ • Applications       │  ├─────────────────────────────────────────────────────────────────────┤  │
+│ • History            │  │ ⓘ Standard permission coverage. System container and simulator      │  │
+│                      │  │   caches were skipped. [Open System Settings to expand coverage]    │  │
+│                      │  └─────────────────────────────────────────────────────────────────────┘  │
+│                      │                                                                           │
+│                      │  ▼ Ready to clear (Rebuildable)                                 3.40 GB    │
+│                      │    ┌─────────────────────────────────────────────────────────────────┐    │
+│                      │    │ [✓] User Application Caches                            2.10 GB  │    │
+│                      │    │     Rebuildable cache · ~/Library/Caches                        │    │
+│                      │    ├─────────────────────────────────────────────────────────────────┤    │
+│                      │    │ [✓] Homebrew Package Cache                             1.30 GB  │    │
+│                      │    │     Rebuildable cache · Safe to remove                          │    │
+│                      │    └─────────────────────────────────────────────────────────────────┘    │
+│                      │                                                                           │
+│                      │  ▶ Needs your review (Review needed)                           0 items    │
+│                      │    No ambiguous items detected in standard scope                          │
+│                      │                                                                           │
+│                      │  ▶ Protected (Safety policy)                                  48.20 GB    │
+│                      │    System libraries, git repositories, and standard applications          │
+│                      │                                                                           │
+│                      │  ┌── Action Tray ──────────────────────────────────────────────────────┐  │
+│                      │  │ 2 items selected (3.40 GB)              [ Review selection ]        │  │
+│                      │  └─────────────────────────────────────────────────────────────────────┘  │
+└──────────────────────┴───────────────────────────────────────────────────────────────────────────┘
+```
+
+### Key principles of the permission-limited flow
+1. **Never nag or block:** If the user selects "Continue with limited scan", the application will never prompt them again during the current scan session.
+2. **Truthful bounding:** All totals are labeled as lower bounds (`"At least…"`). The app never guesses or extrapolates what might be inside unread directories.
+3. **Graceful in-line recovery:** An inline affordance (`[Open System Settings to expand coverage]`) allows the user to grant permissions later if they wish. When granted, the app re-scans only the previously skipped scopes and merges the results without restarting from scratch.
+
+---
+
+## Reduced Motion specifications
+
+In accordance with macOS accessibility guidelines and the token principles in `docs/design/TOKENS.md`, DiskClearance provides comprehensive support for `prefers-reduced-motion: reduce`.
+
+Reduced motion in DiskClearance does not merely remove CSS timing functions; it systematically replaces animated, distracting, or vestibular-triggering visual treatments with calm, stable, and instant visual state transitions.
+
+### Component-by-component animation mapping
+
+| Component / Action | Standard Motion Experience | Reduced Motion Experience | Rationale |
+|---|---|---|---|
+| **Window & View Transitions** | 180ms ease-out opacity fade and 4px vertical slide | Instantaneous cut (0ms transition) | Eliminates spatial displacement and perceived lag |
+| **Scan Progress Bar** | Continuously animated CSS width fill with subtle shimmer | Discrete stepped width changes without smoothing; shimmer animation disabled | Continuous linear motion and shimmering can trigger vestibular distress |
+| **Scan Progress Spinner** | Rotating indeterminate circular spinner | Static status glyph + tabular percentage readout (`"Scanning… 62%"`) | Constant circular rotation is removed |
+| **Item Count & Size Tickers** | Rapidly counting numeric odometer effect | Discrete updates locked to `font-variant-numeric: tabular-nums` | Prevents continuous flashing and number flickering |
+| **Section Accordions** (`Ready to clear`, `Protected`) | 200ms ease-out expand/collapse of container height | Instant toggle between expanded and collapsed states | Avoids large reflows and moving viewport boundaries |
+| **Review Tray Appearance** | Smooth vertical slide-up from bottom (`translateY(100%)` to `translateY(0)`) | Fixed static position or immediate cut-in | Eliminates movement across the reading field |
+| **Contextual Permission Sheet & Modals** | 200ms scale-up (`scale(0.96)` to `scale(1)`) and fade-in | Immediate visibility without scaling or opacity blending | Scaling modals trigger depth distortion |
+| **Deletion Progress Indicator** | Continuous sweep progress bar | Stepped block progress bar with exact item count (`"Processed 3 of 12 items"`) | Replaces continuous sweep with factual discrete counts |
+
+### CSS implementation pattern
+
+The application enforces these rules via global stylesheet directives:
+
+```css
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Replace animated progress shimmers with static high-contrast fills */
+  .progress-bar-fill {
+    transition: none !important;
+    background-image: none !important;
+  }
+
+  /* Disable rotational animation on spinners */
+  .spinner {
+    animation: none !important;
+    display: none;
+  }
+
+  /* Ensure static indicators are displayed instead */
+  .spinner-fallback {
+    display: inline-block;
+  }
+
+  /* Modals appear instantly */
+  .modal-sheet,
+  .review-tray {
+    transform: none !important;
+    transition: none !important;
+  }
+}
+```
+
+

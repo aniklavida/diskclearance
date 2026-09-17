@@ -5,7 +5,7 @@
 - VoiceOver labels include item name, size, class, selection, recoverability, and action where relevant.
 - Status never depends on colour alone.
 - Text and controls remain usable at increased system text size and 200% zoom.
-- Reduced Motion removes non-essential transitions and animated charts.
+- Reduced Motion removes non-essential transitions, continuous spinner animations, and animated charts (see `docs/design/FIRST_RUN.md` for component-by-component mappings).
 - Charts and treemaps have equivalent navigable list/table representations.
 - Destructive confirmations name the action and consequence instead of relying on button colour.
 - Live scan announcements are throttled so assistive technology is not flooded.
