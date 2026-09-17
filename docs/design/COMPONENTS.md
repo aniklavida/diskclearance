@@ -15,3 +15,5 @@ Components consume typed domain states. They must not infer safety classificatio
 Detailed specifications for finding rows, groups, classification badges, evidence disclosures, application rows, and the Explore treemap/table pair are locked in `docs/design/FINDING_ROW_AND_TREEMAP.md`.
 
 Detailed specifications for the review tray, confirmation sheet, and completion summary are locked in `docs/design/REVIEW_TRAY_AND_CONFIRMATION.md`.
+
+Detailed specifications for permission, empty, scan, error, degraded, and loading states are locked in `docs/design/NON_HAPPY_STATES.md`.
