@@ -565,3 +565,275 @@ The two storage figures must never be combined into a single hopeful headline:
 2. **Space available after Trash is emptied**: The real disk space that will be reclaimed once the user empties Trash.
 
 Both figures explicitly qualify coverage whenever access is incomplete (e.g., *"At least 3.40 GB, from the 84% of your disk we could read"*).
+
+---
+
+## Verbatim copy catalogue
+
+Every user-facing string in the first-run flow is locked below in quotation marks. Implementers must use these strings verbatim. Where multiple phrasing options were evaluated, both are provided with the rationale for the recommended choice.
+
+### Step 1: Welcome
+
+- **Eyebrow status pill:**
+  - `"Read-only diagnostic"`
+- **Heading (h1):**
+  - `"See what goes. Keep what matters."`
+- **Reassurance body sentence:**
+  - Primary recommendation: `"A scan inspects disk usage and removes nothing."`
+    - *Rationale:* Concise, unambiguous, and immediately removes the anxiety of accidental deletion before the user even begins.
+  - Evaluated alternative: `"DiskClearance examines your storage to find safe cleanup opportunities, without altering any files."`
+    - *Comparison:* The alternative introduces unnecessary cleaner jargon ("cleanup opportunities") and dilutes the core safety promise.
+- **Secondary caption / note:**
+  - `"All analysis stays local. Nothing is deleted without your confirmation."`
+- **Primary action button:**
+  - Primary recommendation: `"Continue"`
+    - *Rationale:* Standard calm macOS onboarding progression.
+  - Evaluated alternative: `"Get Started"`
+    - *Comparison:* "Get Started" sounds like an account setup or marketing wizard.
+
+---
+
+### Step 2: Scan Mac
+
+- **Section eyebrow / navigation context:**
+  - `"Home"`
+- **Section heading (h2):**
+  - `"Storage overview"`
+- **Drive card title:**
+  - `"Macintosh HD"`
+- **Drive capacity and usage labels:**
+  - Standard representation: `"{used} used of {total} ({free_pct}% free)"` (e.g., `"245.2 GB used of 494.4 GB (50% free)"`)
+  - Subtitle: `"System, developer caches, and user data"`
+- **Primary action button:**
+  - Primary recommendation: `"Scan Mac"`
+    - *Rationale:* Active, decisive, and sets clear scope without unnecessary words.
+  - Evaluated alternative: `"Start Scan"`
+    - *Comparison:* "Scan Mac" grounds the action in the device context and feels more native on macOS.
+- **Footnote / safety reminder:**
+  - `"Read-only inspection. Traversal runs at background priority and alters no files."`
+
+---
+
+### Step 3: Contextual permission
+
+- **Sheet modal title:**
+  - `"Full Disk Access for developer and system caches"`
+- **Primary explanation paragraph:**
+  - `"DiskClearance can inspect standard user caches right now. Granting access allows inspection of protected application containers, Xcode simulator runtimes, and package manager caches."`
+- **Feature comparison section 1 heading:**
+  - `"What access adds:"`
+- **Feature comparison section 1 items:**
+  - Item 1: `"Xcode simulators and device support caches"`
+  - Item 2: `"Isolated application container caches in ~/Library/Containers"`
+  - Item 3: `"Homebrew and system package manager caches"`
+- **Feature comparison section 2 heading:**
+  - `"What works without it:"`
+- **Feature comparison section 2 items:**
+  - Item 1: `"Standard user caches (~/Library/Caches)"`
+  - Item 2: `"Application build outputs in your home folder"`
+  - Item 3: `"macOS Trash inspection and user download reviews"`
+- **Instructions paragraph:**
+  - `"Open System Settings to grant access, or continue with standard user coverage."`
+- **Primary action button:**
+  - `"Open System Settings"`
+- **Secondary action button:**
+  - Primary recommendation: `"Continue with limited scan"`
+    - *Rationale:* Plainly tells the user that the scan will proceed immediately with whatever permissions they already have.
+  - Evaluated alternative: `"Skip for now"`
+    - *Comparison:* "Skip for now" fails to clarify that the scan will still proceed and still be genuinely useful.
+
+---
+
+### Step 4: Streaming results
+
+- **Screen heading:**
+  - `"Scanning Mac…"`
+- **Phase indicator strings:**
+  - Phase 1: `"Phase: Standard user caches"`
+  - Phase 2: `"Phase: Developer build outputs and package caches"`
+  - Phase 3: `"Phase: Simulator runtimes and container caches"`
+  - Phase 4: `"Phase: Reconciling verified findings"`
+- **Current scope format:**
+  - `"Scope: {path}"` (e.g., `"Scope: ~/Library/Caches/com.example.developer/DerivedData"`)
+- **Live metric labels:**
+  - Verified items: `"Verified items: {count}"` (e.g., `"Verified items: 142 items"`)
+  - Verified size: `"Verified size: {size}"` (e.g., `"Verified size: 3.84 GB"`)
+  - Inaccessible paths: `"Inaccessible paths: {count} (skipped)"` (e.g., `"Inaccessible paths: 3 (skipped)"`)
+  - Traversal speed: `"Traversal rate: {count} files/sec"` (e.g., `"Traversal rate: 840 files/sec"`)
+- **Stop button label:**
+  - Default state: `"Stop scan"`
+  - Hover / active feedback: `"Stop scan"`
+  - Cancellation in progress: `"Stopping…"`
+- **Cancellation explanation footnote:**
+  - `"Stopping preserves already verified items and advances to review."`
+- **Cancelled confirmation notification banner:**
+  - `"Scan stopped by user. {count} verified items ({size}) retained for review."`
+
+---
+
+### Step 5: Three calm sections
+
+#### Summary header & coverage qualification
+- **Summary header:**
+  - `"Scan results"`
+- **Full coverage badge:**
+  - `"Full disk read (100% accessible)"`
+- **Partial coverage disclaimer:**
+  - `"At least {reclaimable_size}, from the {coverage_pct}% of your disk we could read"` (e.g., `"At least 3.40 GB, from the 84% of your disk we could read"`)
+
+#### Summary figure 1: Ready to move to Trash
+- **Label:**
+  - `"Ready to move to Trash"`
+- **Quantity format:**
+  - `"{size} ({count} items)"` (e.g., `"3.40 GB (2 items)"`)
+- **Contextual footnote:**
+  - `"Items moved to Trash remain restorable until you empty Trash in Finder."`
+
+#### Summary figure 2: Space available after Trash is emptied
+- **Label:**
+  - `"Space available after Trash is emptied"`
+- **Quantity format:**
+  - `"{size}"` (e.g., `"3.40 GB"`)
+- **Contextual footnote:**
+  - `"Disk capacity increases only after Trash is emptied in macOS Finder."`
+
+#### Section 1: Ready to clear
+- **Section title:**
+  - `"Ready to clear"`
+- **Category badge text:**
+  - `"Rebuildable"`
+- **Section explanatory description:**
+  - `"Rebuildable caches and disposable build artifacts. Safe to remove; applications recreate these automatically when needed."`
+- **Default state:**
+  - All items in this section are selected by default.
+- **Empty state copy:**
+  - Title: `"No rebuildable items found"`
+  - Subtitle: `"Your application and developer caches are already tidy."`
+
+#### Section 2: Needs your review
+- **Section title:**
+  - `"Needs your review"`
+- **Category badge text:**
+  - `"Review"`
+- **Section explanatory description:**
+  - `"Items requiring your explicit decision. Kept unselected until you choose to inspect them."`
+- **Default state:**
+  - All items in this section are unselected by default.
+- **Empty state copy:**
+  - Title: `"No items need review"`
+  - Subtitle: `"No duplicate files or orphan application data were detected."`
+
+#### Section 3: Protected
+- **Section title:**
+  - `"Protected"`
+- **Category badge text:**
+  - `"Protected"`
+- **Section explanatory description:**
+  - `"Core system files, version control repositories, and active applications. Never selected or modified."`
+- **Default state:**
+  - Locked and uncheckable.
+- **Summary copy inside card:**
+  - `"{size} protected by safety policy ({count} items)"` (e.g., `"48.20 GB protected by safety policy (1,420 items)"`)
+
+#### Primary review action button
+- **Button label:**
+  - `"Review selection ({selected_size})"` (e.g., `"Review selection (3.40 GB)"`)
+- **Disabled state label (when 0 items selected):**
+  - `"Select items to review"`
+
+---
+
+### Step 6: Review
+
+- **Screen navigation context:**
+  - `"Cleanup > Review plan"`
+- **Screen heading (h2):**
+  - `"Review items to clear"`
+- **Instructional description:**
+  - `"All selected items will be moved to macOS Trash. Nothing is permanently removed unless you choose Delete Now."`
+- **Table column headers:**
+  - Column 1: `"Item"`
+  - Column 2: `"Safety Class"`
+  - Column 3: `"Location"`
+  - Column 4: `"Size"`
+- **Uncertain item badge / warning tooltip:**
+  - `"Manual review required · Unselected by default"`
+- **Review tray summary metrics:**
+  - Line 1: `"Ready to move to Trash: {size} ({count} items)"`
+  - Line 2: `"Space available after Trash is emptied: {size}"`
+- **Action buttons in review tray:**
+  - Navigation return button: `"Back"`
+  - Default recoverable button: `"Move to Trash ({selected_size})"` (e.g., `"Move to Trash (3.40 GB)"`)
+  - Irreversible secondary button: `"Delete Now (Irreversible)"`
+
+#### Destructive modal: Delete Now confirmation
+- **Dialog heading:**
+  - `"Permanently delete {count} items?"`
+- **Warning text:**
+  - `"These files will be removed immediately from your disk without using the macOS Trash. You cannot undo this action or restore these files."`
+- **Confirm button:**
+  - `"Delete Immediately"`
+- **Cancel button:**
+  - `"Cancel"`
+
+---
+
+### Step 7: Honest completion
+
+#### Variant A: Standard Trash cleanup (Default path)
+- **Screen navigation context:**
+  - `"History > Operation record"`
+- **Heading (h2):**
+  - `"Cleanup complete"`
+- **Subheading / primary result:**
+  - `"{count} items moved to Trash"` (e.g., `"2 items moved to Trash"`)
+- **Metric breakdowns in manifest summary:**
+  - Metric 1 label: `"Space moved to Trash"`
+    - Metric 1 value: `"{size}"` (e.g., `"3.40 GB"`)
+  - Metric 2 label: `"Disk space freed immediately"`
+    - Metric 2 value: `"0 B"`
+  - Metric 3 label: `"Space recoverable once Trash is emptied"`
+    - Metric 3 value: `"{size}"` (e.g., `"3.40 GB"`)
+- **Audit line:**
+  - `"Failed items: 0 · Skipped items: 0 (no files vanished or changed during review)"`
+- **Reassurance reminder body:**
+  - `"Items remain safely in your macOS Trash until you empty Trash in Finder. You can restore them from History at any time before then."`
+- **Action buttons:**
+  - Secondary: `"View audit log"`
+  - Primary: `"Done"`
+
+#### Variant B: Permanent deletion (Delete Now path)
+- **Screen navigation context:**
+  - `"History > Operation record"`
+- **Heading (h2):**
+  - `"Permanent deletion complete"`
+- **Subheading / primary result:**
+  - `"{count} items permanently deleted"` (e.g., `"2 items permanently deleted"`)
+- **Metric breakdowns in manifest summary:**
+  - Metric 1 label: `"Disk space freed immediately"`
+    - Metric 1 value: `"{size}"` (e.g., `"3.40 GB"`)
+  - Metric 2 label: `"Pending in Trash"`
+    - Metric 2 value: `"0 B"`
+- **Audit line:**
+  - `"Failed items: 0 · Skipped items: 0"`
+- **Irreversible reminder body:**
+  - `"Items were permanently removed from disk as requested. This operation cannot be undone. Full cryptographic manifest saved in local History."`
+- **Action buttons:**
+  - Secondary: `"View audit log"`
+  - Primary: `"Done"`
+
+#### Variant C: Partial failure or skipped items
+- **Heading (h2):**
+  - `"Cleanup completed with warnings"`
+- **Subheading / primary result:**
+  - `"{success_count} moved to Trash · {skipped_count} skipped"`
+- **Explanatory text:**
+  - `"{skipped_count} item changed on disk after your review and was skipped to protect your data."`
+- **Skipped item detail line:**
+  - `"{path} — modified after review snapshot"`
+- **Audit line:**
+  - `"Failed: 0 · Skipped: {skipped_count} · Succeeded: {success_count}"`
+- **Action buttons:**
+  - Secondary: `"View audit log"`
+  - Primary: `"Done"`
+
