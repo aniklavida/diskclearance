@@ -865,6 +865,30 @@ A person looking at the screen immediately perceives one number as belonging to 
   - Uses `--text-secondary` with a subtle dashed underline or parenthetical condition `(after emptying Trash)`.
   - Never styled with action buttons or green accent tints, preventing the false belief that clicking "Move to Trash" instantly expands free space on the drive.
 
+### When the two figures differ, and why every sketch above hides it
+
+Every worked example in this document shows both figures as `3.40 GB`, because they were drawn for a first run on a Mac with an empty Trash and nothing selected for immediate deletion. That is the one case where the two are equal — and illustrating only that case teaches a reader the opposite of this section's point. An implementer could look at the sketches and reasonably conclude the second figure is ceremony.
+
+They diverge whenever the Trash is not empty, which on a real Mac is most of the time:
+
+```text
+┌──────────────────────────────────────────────────────────────────────────┐
+│ [Icon: Disk]  Space available after Trash is emptied: 11.80 GB          │
+│               8.40 GB already in Trash · 3.40 GB from this review       │
+├──────────────────────────────────────────────────────────────────────────┤
+│ [Icon: Trash] Ready to move to Trash: 3.40 GB (2 items)     [ Review ]  │
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
+The volume figure is the larger one here, and it is larger for a reason that has nothing to do with what the user just selected. That is exactly the relationship the design must make legible: **the tray figure is what this session contributes; the volume figure is what the disk would recover if the user emptied the Trash right now.**
+
+Two rules follow, and they matter more than the layout:
+
+- **The two figures are never added together, and never replaced by their sum.** A single `15.20 GB` headline would be the lie this entire section exists to prevent.
+- **When the Trash already holds something, the volume figure says so inline** — `8.40 GB already in Trash · 3.40 GB from this review` — rather than presenting a total the user cannot account for. A number a person cannot decompose is a number they are asked to trust rather than read.
+
+When the Trash is genuinely empty, the second line is omitted and the two figures match. Showing the same value twice is honest there; it is the explanation that must not be.
+
 ### Truthful handling of partial coverage
 Whenever permissions prevent complete traversal of the disk (the standard macOS state), neither figure is presented as a confident exact total.
 - The headline figure is prefixed with a mathematical lower-bound indicator: `"At least 3.40 GB"`.
