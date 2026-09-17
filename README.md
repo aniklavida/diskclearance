@@ -17,7 +17,9 @@ DiskClearance is an open-source, safety-first desktop application for understand
 - Review plans that are revalidated immediately before execution.
 - Move to Trash by default, optional irreversible deletion, and truthful operation history.
 
-The first supported platform will be macOS 13 Ventura and later. The architecture keeps platform behavior isolated so Windows support can be added after the macOS v1.0 is complete.
+The first supported platform will be macOS 13 Ventura and later, on **Apple Silicon only** — Intel Macs are not supported in v1.0. The architecture keeps platform behavior isolated so Windows support can be added after the macOS v1.0 is complete.
+
+**Released builds are unsigned and not notarized.** Code signing is planned, not implemented. Until it is done, macOS will refuse to open a downloaded build on a double-click; use right-click → Open the first time, or clear the quarantine attribute. Nothing here is signed yet and this note stays until something is.
 
 ## Development
 
