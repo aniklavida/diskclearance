@@ -123,7 +123,7 @@ A protected item is **reassurance that the tool knows what to leave alone**, not
 ┌────────────────────────────────────────┐  ┌────────────────────────────────────────┐
 │ Calm Protected Treatment (Reassurance) │  │ Irreversible Action Treatment (Alert)  │
 ├────────────────────────────────────────┤  ├────────────────────────────────────────┤
-│ Badge:   [🔒 Protected]                │  │ Action:  [⚠ Delete Now (Irreversible)] │
+│ Badge:   [🔒 Protected]                │  │ Action:  [⚠ Delete Now (Irreversible)]  │
 │ Surface: Neutral slate tint            │  │ Surface: Danger red alert tint         │
 │ Light:   #e1e6e5 bg / #283632 fg       │  │ Light:   #fae3e3 bg / #7f1d1d fg       │
 │ Dark:    #26302e bg / #ccd5d1 fg       │  │ Dark:    #3b191b bg / #fca5a5 fg       │
@@ -163,13 +163,13 @@ Findings are organized under group headers representing their owning tool, runti
 ### Visual layout: 1100 × 720 px (Expanded)
 
 ```text
-┌─────────────────────────────────────────────────────────────────────────────────────────┐
+┌──────────────────────────────────────────────────────────────────────────────────────────────┐
 │ [✓]  ▼  Xcode Developer Tools              3 items  │  5.50 GB total   [1 item needs review] │
-├─────────────────────────────────────────────────────────────────────────────────────────┤
-│   [✓] Xcode DerivedData          [↺ Rebuildable]   34 days ago   2.10 GB   Rebuildable   [▼]│
-│   [✓] Xcode Simulator Caches     [↺ Rebuildable]   12 days ago   2.00 GB   Rebuildable   [▶]│
-│   [ ] Xcode Device Logs          [◇ Review]         3 mos ago    1.40 GB   Review first  [▶]│
-└─────────────────────────────────────────────────────────────────────────────────────────┘
+├──────────────────────────────────────────────────────────────────────────────────────────────┤
+│   [✓] Xcode DerivedData        [↺ Rebuildable]  34 days ago  2.10 GB  Rebuildable cache  [▼] │
+│   [✓] Xcode Simulator Caches   [↺ Rebuildable]  12 days ago  2.00 GB  Rebuildable cache  [▶] │
+│   [ ] Xcode Device Logs          [◇ Review]         3 mos ago    1.40 GB   Review first  [▶] │
+└──────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Visual layout: 760 × 560 px (Compact)
@@ -177,13 +177,13 @@ Findings are organized under group headers representing their owning tool, runti
 At minimum width, secondary summary labels consolidate to preserve touch targets and typography:
 
 ```text
-┌────────────────────────────────────────────────────────────────────────────┐
-│ [✓]  ▼  Xcode                                            3 items · 5.50 GB │
-├────────────────────────────────────────────────────────────────────────────┤
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ [✓]  ▼  Xcode                                            3 items · 5.50 GB   │
+├──────────────────────────────────────────────────────────────────────────────┤
 │   [✓] Xcode DerivedData              [↺ Rebuildable]              2.10 GB [▼]│
 │   [✓] Xcode Simulator Caches         [↺ Rebuildable]              2.00 GB [▶]│
 │   [ ] Xcode Device Logs              [◇ Review]                   1.40 GB [▶]│
-└────────────────────────────────────────────────────────────────────────────┘
+└──────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -195,10 +195,10 @@ The finding row is designed to answer Questions 1, 3, and 5 at rest, and Questio
 ### Row anatomy
 
 ```text
-┌───┬──────────────────────────┬─────────────────┬─────────────┬──────────────┬──────────┬───┐
-│[✓]│ Xcode DerivedData        │ [↺ Rebuildable] │ 34 days ago │ Rebuildable  │ 2.10 GB  │[▼]│
-└───┴──────────────────────────┴─────────────────┴─────────────┴──────────────┴──────────┴───┘
-  1               2                     3               4             5            6       7
+┌───┬──────────────────────────┬─────────────────┬─────────────┬───────────────────┬──────────┬───┐
+│[✓]│ Xcode DerivedData        │ [↺ Rebuildable] │ 34 days ago │ Rebuildable cache │ 2.10 GB  │[▼]│
+└───┴──────────────────────────┴─────────────────┴─────────────┴───────────────────┴──────────┴───┘
+  1              2                      3              4                5              6       7
 ```
 
 1. **Selection checkbox (`32 × 32 px` hit target):**
@@ -238,24 +238,24 @@ Expanding a finding row opens the integrated evidence disclosure drawer immediat
 ### Evidence disclosure drawer layout
 
 ```text
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│ [✓]  Xcode DerivedData          [↺ Rebuildable]   34 days ago   Rebuildable   2.10 GB [▼]│
-├────────────────────────────────────────────────────────────────────────────────────────┤
-│  ┌── Evidence and verification details ──────────────────────────────────────────────┐ │
-│  │ Rule identifier:  developer.xcode.deriveddata (catalogue v2)                      │ │
-│  │ Owning tool:      Xcode 15.2                                                      │ │
-│  │ Match confidence: Definite (Exact match on canonical project build store)         │ │
-│  │ Canonical path:   ~/Library/Caches/com.synthetic.developer/DerivedData   [Copy]   │ │
-│  │ Last activity:    2026-08-14 11:22 UTC (34 days ago)                              │ │
-│  ├───────────────────────────────────────────────────────────────────────────────────┤ │
-│  │ What regenerates this:                                                            │ │
-│  │ Rebuilt automatically by Xcode on next build (`xcodebuild` or Xcode IDE).         │ │
-│  ├───────────────────────────────────────────────────────────────────────────────────┤ │
-│  │ Recoverability assessment:                                                        │ │
-│  │ Rebuildable cache. Moving to Trash preserves files until Trash is emptied. Build  │ │
-│  │ times may temporarily increase while intermediate objects recompile.              │ │
-│  └───────────────────────────────────────────────────────────────────────────────────┘ │
-└────────────────────────────────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────────────────────────┐
+│ [✓]  Xcode DerivedData        [↺ Rebuildable]  34 days ago  Rebuildable cache  2.10 GB [▼]│
+├───────────────────────────────────────────────────────────────────────────────────────────┤
+│  ┌── Evidence and verification details ──────────────────────────────────────────────┐    │
+│  │ Rule identifier:  developer.xcode.deriveddata (catalogue v2)                      │    │
+│  │ Owning tool:      Xcode 15.2                                                      │    │
+│  │ Match confidence: Definite (Exact match on canonical project build store)         │    │
+│  │ Canonical path:   ~/Library/Caches/com.synthetic.developer/DerivedData   [Copy]   │    │
+│  │ Last activity:    2026-08-14 11:22 UTC (34 days ago)                              │    │
+│  ├───────────────────────────────────────────────────────────────────────────────────┤    │
+│  │ What regenerates this:                                                            │    │
+│  │ Rebuilt automatically by Xcode on next build (`xcodebuild` or Xcode IDE).         │    │
+│  ├───────────────────────────────────────────────────────────────────────────────────┤    │
+│  │ Recoverability assessment:                                                        │    │
+│  │ Rebuildable cache. Moving to Trash preserves files until Trash is emptied. Build  │    │
+│  │ times may temporarily increase while intermediate objects recompile.              │    │
+│  └───────────────────────────────────────────────────────────────────────────────────┘    │
+└───────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Structured evidence fields
@@ -322,31 +322,34 @@ This worked example demonstrates a row answering Questions 1, 3, and 5 at rest, 
 #### At Rest (Questions 1, 3, and 5 answered)
 
 ```text
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│ [✓]  Xcode DerivedData          [↺ Rebuildable]   34 days ago   Rebuildable   2.10 GB [▶]│
-└────────────────────────────────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────────────────────────┐
+│ [✓]  Xcode DerivedData        [↺ Rebuildable]  34 days ago  Rebuildable cache  2.10 GB [▶]│
+└───────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 - **Question 1 (What is it?):** `"Xcode DerivedData"` (Visible at rest).
 - **Question 3 (How much space?):** `"2.10 GB"` (Visible at rest; tabular numerals).
-- **Question 5 (Can it be recovered?):** `"Rebuildable"` / `"Rebuildable cache"` (Visible at rest).
+- **Question 5 (Can it be recovered?):** `"Rebuildable cache"` in the recoverability column (Visible at rest).
+  Note that this is a different field from the class badge in column 3, which reads `"Rebuildable"`. The badge states
+  what the core classified the item as; the recoverability summary states what getting it back would involve. They are
+  rendered with different text precisely so the row does not appear to answer one question twice.
 
 #### After one interaction: Chevron clicked or Enter pressed (Questions 2 and 4 answered)
 
 ```text
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│ [✓]  Xcode DerivedData          [↺ Rebuildable]   34 days ago   Rebuildable   2.10 GB [▼]│
-├────────────────────────────────────────────────────────────────────────────────────────┤
-│  Rule: developer.xcode.deriveddata (v2) · Tool: Xcode 15.2 · Match: Definite           │
-│  Path: ~/Library/Caches/com.synthetic.developer/DerivedData                            │
-│                                                                                        │
-│  Why was it found? (Question 2):                                                       │
-│  Matches canonical intermediate build root specified in Xcode toolchain rules.         │
-│                                                                                        │
-│  What changes if it goes? (Question 4):                                                │
-│  Xcode will regenerate indexes and compilation objects on next build. Build times may │
-│  increase temporarily while objects are re-created.                                    │
-└────────────────────────────────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────────────────────────┐
+│ [✓]  Xcode DerivedData        [↺ Rebuildable]  34 days ago  Rebuildable cache  2.10 GB [▼]│
+├───────────────────────────────────────────────────────────────────────────────────────────┤
+│  Rule: developer.xcode.deriveddata (v2) · Tool: Xcode 15.2 · Match: Definite              │
+│  Path: ~/Library/Caches/com.synthetic.developer/DerivedData                               │
+│                                                                                           │
+│  Why was it found? (Question 2):                                                          │
+│  Matches canonical intermediate build root specified in Xcode toolchain rules.            │
+│                                                                                           │
+│  What changes if it goes? (Question 4):                                                   │
+│  Xcode will regenerate indexes and compilation objects on next build. Build times may     │
+│  increase temporarily while objects are re-created.                                       │
+└───────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Worked Example 2: Distinct numbers demonstration
@@ -377,7 +380,7 @@ The Applications view analyzes installed software packages, their primary execut
 
 ```text
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
-│ [App Icon] SyntheticStudio Pro           v3.4.1   │   5.25 GB total footprint     [▼] │
+│ [App Icon] SyntheticStudio Pro           v3.4.1   │   5.25 GB total footprint     [▼]  │
 └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -387,22 +390,22 @@ The application row presents the total measured footprint (`5.25 GB`). Expanding
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────────────────────┐
-│ [App Icon] SyntheticStudio Pro           v3.4.1   │   5.25 GB total footprint      [▼] │
+│ [App Icon] SyntheticStudio Pro           v3.4.1   │   5.25 GB total footprint      [▼]  │
 ├─────────────────────────────────────────────────────────────────────────────────────────┤
 │  ┌── Measured application components ─────────────────────────────────────────────────┐ │
-│  │ [🔒] Application Bundle (Installed binary)                          1.45 GB        │ │
-│  │      /Applications/SyntheticStudio Pro.app                         [Protected]    │ │
+│  │ [🔒] Application Bundle (Installed binary)                          1.45 GB        │  │
+│  │      /Applications/SyntheticStudio Pro.app                         [Protected]    │  │
 │  │                                                                                    │ │
-│  │ [✓] User Render Cache (Rebuildable cache)                          2.60 GB        │ │
-│  │      ~/Library/Caches/com.synthetic.photostudio                    [Rebuildable]  │ │
+│  │ [✓] User Render Cache (Rebuildable cache)                          2.60 GB        │  │
+│  │      ~/Library/Caches/com.synthetic.photostudio                    [Rebuildable]  │  │
 │  │      Confidence: Definite (Exact bundle identifier match)                          │ │
 │  │                                                                                    │ │
 │  │ [ ] Sandboxed Container (Orphan state)                              1.20 GB        │ │
-│  │      ~/Library/Containers/com.synthetic.photostudio                [Review]       │ │
+│  │      ~/Library/Containers/com.synthetic.photostudio                [Review]       │  │
 │  │      Confidence: Definite (Sandboxed container root)                               │ │
 │  │                                                                                    │ │
-│  │ [ ] Shared Plugin Presets (User config)                            0.00 GB (24 MB)│ │
-│  │      ~/Library/Application Support/SyntheticStudio                 [Review]       │ │
+│  │ [ ] Shared Plugin Presets (User config)                            0.00 GB (24 MB)│  │
+│  │      ~/Library/Application Support/SyntheticStudio                 [Review]       │  │
 │  │      Confidence: Likely (Matches application vendor naming)                        │ │
 │  └────────────────────────────────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────────────────────────────┘
@@ -473,7 +476,7 @@ The treemap renders a nested squarified tessellation where rectangle area is str
 │                                       │ 6.20 GB               │                        │
 │                                       │ [↺ Rebuildable]       │ [ Copy Path ]          │
 ├───────────────────────────────────────┴───────────────────────┤ [ Add to Plan ]        │
-│ Toolchains: 4.80 GB [🔒 Protected]    │ Archives: 2.10 GB [◇] │                        │
+│ Toolchains: 4.80 GB [🔒 Protected]    │ Archives: 2.10 GB [◇] │                         │
 └───────────────────────────────────────┴───────────────────────┴────────────────────────┘
 ```
 
@@ -497,11 +500,11 @@ The folder table presents identical underlying data, synchronizes state bidirect
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │ Name                       Safety Class       Last Modified    Item Count         Size │
 ├────────────────────────────────────────────────────────────────────────────────────────┤
-│ 📁 Projects                --                 Yesterday        14 folders     18.40 GB │
-│ 📁 DerivedData             [↺ Rebuildable]    2 hours ago      4,812 files    12.60 GB │
-│ 📁 Simulators              [↺ Rebuildable]    3 days ago       1,240 files     6.20 GB │
-│ 📁 Toolchains              [🔒 Protected]     May 12, 2026     318 files       4.80 GB │
-│ 📁 Archives                [◇ Review]         3 weeks ago      12 files        2.10 GB │
+│ 📁 Projects                --                 Yesterday        14 folders     18.40 GB  │
+│ 📁 DerivedData             [↺ Rebuildable]    2 hours ago      4,812 files    12.60 GB  │
+│ 📁 Simulators              [↺ Rebuildable]    3 days ago       1,240 files     6.20 GB  │
+│ 📁 Toolchains              [🔒 Protected]     May 12, 2026     318 files       4.80 GB   │
+│ 📁 Archives                [◇ Review]         3 weeks ago      12 files        2.10 GB  │
 └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
