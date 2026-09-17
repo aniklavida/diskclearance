@@ -56,8 +56,14 @@ They are commitments, not coverage. **Production deletion stays disabled until t
 ## Distribution
 
 - [ ] macOS 13 minimum is encoded and verified on the oldest supported system.
-- [ ] Universal Apple Silicon and Intel artifact is built, or architecture support is stated precisely.
-- [ ] Hardened runtime, signing, notarization, and Gatekeeper checks pass.
+- [ ] Architecture support is stated precisely. **v1.0 is Apple Silicon only**; Intel Macs are not supported, and
+      the release notes and README say so rather than leaving a reader to discover it.
+- [ ] **Signing and notarization are deferred, so this release is unsigned.** Verify instead that the README and the
+      release notes state "unsigned" plainly and give the right-click → Open step. Do not tick a signing box that
+      nothing performed.
+- [ ] _(Once an Apple Developer Program membership exists)_ Hardened runtime, signing, notarization and Gatekeeper
+      checks pass. Before the first signed build, settle whether the certificate publishes an individual's legal name
+      or an organisation name — a Developer ID signature is readable by anyone who runs `codesign -dv --verbose=4`.
 - [ ] Fresh-machine install, upgrade, uninstall, and data-location behavior are documented and tested.
 - [ ] Software bill of materials and dependency/security audit are recorded.
 
