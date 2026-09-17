@@ -11,3 +11,5 @@
 - **Pending in Trash:** show recoverable space separately from freed space.
 - **Restore conflict:** never overwrite; offer a safe alternate name or cancel.
 - **Database recovery:** preserve operation evidence where possible and provide a safe reset path.
+
+Detailed specifications for non-happy states across permission refusals, scan interruptions, empty scopes, operation errors, degraded totals, and recovery are locked in `docs/design/NON_HAPPY_STATES.md`.
