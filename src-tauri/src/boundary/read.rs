@@ -455,6 +455,13 @@ pub fn fetch_storage_reclamation_report(
     session_id: String,
     database: tauri::State<'_, Arc<AppDatabase>>,
 ) -> Result<StorageReclamationReport, CommandError> {
+    fetch_storage_reclamation_report_core(session_id, database.inner())
+}
+
+pub fn fetch_storage_reclamation_report_core(
+    session_id: String,
+    database: &AppDatabase,
+) -> Result<StorageReclamationReport, CommandError> {
     let conn = database
         .connection()
         .lock()
@@ -592,6 +599,81 @@ mod tests {
         assert_eq!(file_c.size_bytes, 50);
         assert_eq!(file_c.file_count, 1);
         assert!(!file_c.is_dir);
+    }
+
+    #[test]
+    fn test_fetch_storage_reclamation_report_totals() {
+        let db = AppDatabase::open_in_memory().unwrap();
+        let conn = db.connection().lock().unwrap();
+
+        ScanSessionRepository::create_session(&conn, "sess-report", "/").unwrap();
+
+        // Review/Trash
+        ScanSessionRepository::insert_finding(
+            &conn,
+            "f1",
+            "sess-report",
+            "/root/f1",
+            1013,
+            "Review",
+            "Scanned",
+        )
+        .unwrap();
+        ScanSessionRepository::insert_finding(
+            &conn,
+            "f2",
+            "sess-report",
+            "/root/f2",
+            2017,
+            "Trash",
+            "Scanned",
+        )
+        .unwrap();
+
+        // Rebuildable/PermanentDelete
+        ScanSessionRepository::insert_finding(
+            &conn,
+            "f3",
+            "sess-report",
+            "/root/f3",
+            3109,
+            "Rebuildable",
+            "Scanned",
+        )
+        .unwrap();
+        ScanSessionRepository::insert_finding(
+            &conn,
+            "f4",
+            "sess-report",
+            "/root/f4",
+            5003,
+            "PermanentDelete",
+            "Scanned",
+        )
+        .unwrap();
+        drop(conn);
+
+        let report = fetch_storage_reclamation_report_core("sess-report".to_string(), &db).unwrap();
+
+        let expected_pending = 1013 + 2017;
+        let expected_permanently = 3109 + 5003;
+
+        assert_eq!(report.pending_in_trash_bytes, expected_pending);
+        assert_eq!(report.permanently_reclaimed_bytes, expected_permanently);
+
+        // Guard against future regression
+        assert_ne!(
+            report.pending_in_trash_bytes,
+            report.permanently_reclaimed_bytes
+        );
+        assert_ne!(
+            report.pending_in_trash_bytes,
+            expected_pending + expected_permanently
+        );
+        assert_ne!(
+            report.permanently_reclaimed_bytes,
+            expected_pending + expected_permanently
+        );
     }
 
     #[test]
