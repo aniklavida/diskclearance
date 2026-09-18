@@ -10,13 +10,6 @@ use std::sync::Arc;
 use foundation::FoundationStatus;
 use platform::PlatformAdapter;
 
-use std::collections::HashMap;
-use std::sync::Mutex;
-
-pub struct PlanStore {
-    pub plans: Mutex<HashMap<String, (boundary::plan::ReviewPlan, Vec<classify::plan::PlanItem>)>>,
-}
-
 #[tauri::command]
 fn foundation_status(adapter: tauri::State<'_, Arc<dyn PlatformAdapter>>) -> FoundationStatus {
     FoundationStatus::from_platform(adapter.inner().as_ref())
@@ -33,15 +26,11 @@ pub fn run() {
         Err(err) => panic!("failed to open application database: {err}"),
     };
     let cancellations = boundary::CancellationRegistry::new();
-    let plan_store = PlanStore {
-        plans: Mutex::new(HashMap::new()),
-    };
 
     tauri::Builder::default()
         .manage(adapter)
         .manage(database)
         .manage(cancellations)
-        .manage(plan_store)
         .invoke_handler(tauri::generate_handler![
             foundation_status,
             boundary::read::start_scan,
@@ -49,6 +38,7 @@ pub fn run() {
             boundary::read::fetch_findings_page,
             boundary::read::fetch_folder_aggregate,
             boundary::read::fetch_application_inventory,
+            boundary::read::fetch_storage_reclamation_report,
             boundary::plan::build_plan,
             boundary::plan::fetch_plan,
             boundary::plan::revalidate_plan,

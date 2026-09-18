@@ -357,10 +357,9 @@ pub fn fetch_findings_page(
     })
 }
 
-#[tauri::command]
-pub fn fetch_folder_aggregate(
+pub fn fetch_folder_aggregate_core(
     args: FetchFolderAggregateArgs,
-    database: tauri::State<'_, Arc<AppDatabase>>,
+    database: &Arc<AppDatabase>,
 ) -> Result<FolderAggregate, CommandError> {
     let conn = database
         .connection()
@@ -436,6 +435,64 @@ pub fn fetch_folder_aggregate(
     })
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct StorageReclamationReport {
+    pub pending_in_trash_bytes: u64,
+    pub permanently_reclaimed_bytes: u64,
+}
+
+#[tauri::command]
+pub fn fetch_folder_aggregate(
+    args: FetchFolderAggregateArgs,
+    database: tauri::State<'_, Arc<AppDatabase>>,
+) -> Result<FolderAggregate, CommandError> {
+    fetch_folder_aggregate_core(args, database.inner())
+}
+
+#[tauri::command]
+pub fn fetch_storage_reclamation_report(
+    session_id: String,
+    database: tauri::State<'_, Arc<AppDatabase>>,
+) -> Result<StorageReclamationReport, CommandError> {
+    let conn = database
+        .connection()
+        .lock()
+        .map_err(|e| CommandError::Unsupported {
+            feature: "fetch_storage_reclamation_report".into(),
+            reason: e.to_string(),
+        })?;
+    let mut stmt = conn.prepare("SELECT safety_class, SUM(size_bytes) FROM findings WHERE session_id = ?1 GROUP BY safety_class").map_err(|e| CommandError::Unsupported { feature: "fetch_storage_reclamation_report".into(), reason: e.to_string() })?;
+
+    let mut pending_in_trash_bytes = 0;
+    let mut permanently_reclaimed_bytes = 0;
+
+    let rows = stmt
+        .query_map(rusqlite::params![session_id], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)? as u64))
+        })
+        .map_err(|e| CommandError::Unsupported {
+            feature: "fetch_storage_reclamation_report".into(),
+            reason: e.to_string(),
+        })?;
+
+    for row in rows {
+        if let Ok((class, size)) = row {
+            if class == "Review" || class == "Trash" {
+                pending_in_trash_bytes += size;
+            } else if class == "Rebuildable" || class == "PermanentDelete" {
+                permanently_reclaimed_bytes += size;
+            } else {
+                pending_in_trash_bytes += size;
+            }
+        }
+    }
+    Ok(StorageReclamationReport {
+        pending_in_trash_bytes,
+        permanently_reclaimed_bytes,
+    })
+}
+
 #[tauri::command]
 pub fn fetch_application_inventory() -> Result<ApplicationInventory, CommandError> {
     // Application inventory inspection is planned for subsequent implementation.
@@ -471,6 +528,70 @@ mod tests {
         fn emit_terminal(&mut self, payload: TerminalCompletionPayload) {
             self.terminals.lock().unwrap().push(payload);
         }
+    }
+
+    #[test]
+    #[test]
+    fn test_fetch_folder_aggregate_sums_correctly() {
+        let db = AppDatabase::open_in_memory().unwrap();
+        let conn = db.connection().lock().unwrap();
+
+        ScanSessionRepository::create_session(&conn, "sess-agg", "/").unwrap();
+
+        // Add findings to db:
+        ScanSessionRepository::insert_finding(
+            &conn,
+            "f1",
+            "sess-agg",
+            "/root/dir1/fileA.txt",
+            10,
+            "Review",
+            "Scanned",
+        )
+        .unwrap();
+        ScanSessionRepository::insert_finding(
+            &conn,
+            "f2",
+            "sess-agg",
+            "/root/dir1/fileB.txt",
+            20,
+            "Review",
+            "Scanned",
+        )
+        .unwrap();
+        ScanSessionRepository::insert_finding(
+            &conn,
+            "f3",
+            "sess-agg",
+            "/root/fileC.txt",
+            50,
+            "Review",
+            "Scanned",
+        )
+        .unwrap();
+        drop(conn);
+
+        let args = FetchFolderAggregateArgs {
+            session_id: "sess-agg".to_string(),
+            path: "/root".to_string(),
+        };
+        let res = fetch_folder_aggregate_core(args, &db).unwrap();
+
+        assert_eq!(res.total_size_bytes, 80);
+        assert_eq!(res.file_count, 3);
+
+        let dir1 = res.children.iter().find(|c| c.name == "dir1").unwrap();
+        assert_eq!(
+            dir1.size_bytes, 30,
+            "size must be a true sum, not last-write-wins"
+        );
+        assert_eq!(dir1.file_count, 2);
+        assert!(dir1.is_dir);
+
+        let file_c = res.children.iter().find(|c| c.name == "fileC.txt").unwrap();
+        assert_eq!(file_c.size_bytes, 50);
+        assert_eq!(file_c.file_count, 1);
+        assert!(!file_c.is_dir);
     }
 
     #[test]
