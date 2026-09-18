@@ -359,12 +359,80 @@ pub fn fetch_findings_page(
 
 #[tauri::command]
 pub fn fetch_folder_aggregate(
-    _args: FetchFolderAggregateArgs,
+    args: FetchFolderAggregateArgs,
+    database: tauri::State<'_, Arc<AppDatabase>>,
 ) -> Result<FolderAggregate, CommandError> {
-    // Folder aggregate exploration is planned for subsequent implementation.
-    Err(CommandError::Unsupported {
-        feature: "fetch_folder_aggregate".into(),
-        reason: "Folder aggregation is not implemented in this milestone".into(),
+    let conn = database
+        .connection()
+        .lock()
+        .map_err(|e| CommandError::Unsupported {
+            feature: "fetch_folder_aggregate".into(),
+            reason: format!("db lock: {e}"),
+        })?;
+
+    let path_prefix = if args.path.ends_with('/') {
+        args.path.clone()
+    } else {
+        format!("{}/", args.path)
+    };
+    let pattern = format!("{}%", path_prefix);
+
+    let mut stmt = conn
+        .prepare("SELECT path, size_bytes FROM findings WHERE session_id = ? AND path LIKE ?")
+        .map_err(|e| CommandError::Unsupported {
+            feature: "aggregate".into(),
+            reason: e.to_string(),
+        })?;
+
+    let mut children = std::collections::HashMap::new();
+    let mut total_size = 0;
+    let mut total_count = 0;
+
+    let rows = stmt
+        .query_map(rusqlite::params![args.session_id, pattern], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)? as u64))
+        })
+        .map_err(|e| CommandError::Unsupported {
+            feature: "aggregate".into(),
+            reason: e.to_string(),
+        })?;
+
+    for row in rows {
+        if let Ok((path, size)) = row {
+            total_size += size;
+            total_count += 1;
+
+            if !path.starts_with(&path_prefix) {
+                continue;
+            }
+            let rel = &path[path_prefix.len()..];
+            let parts: Vec<&str> = rel.split('/').collect();
+            if parts.is_empty() || parts[0].is_empty() {
+                continue;
+            }
+            let is_dir = parts.len() > 1;
+            let name = parts[0].to_string();
+
+            let entry = children
+                .entry(name.clone())
+                .or_insert_with(|| FolderAggregateEntry {
+                    name: name.clone(),
+                    path: format!("{}{}", path_prefix, name),
+                    size_bytes: 0,
+                    file_count: 0,
+                    is_dir,
+                });
+            entry.size_bytes += size;
+            entry.file_count += 1;
+            entry.is_dir = entry.is_dir || is_dir;
+        }
+    }
+
+    Ok(FolderAggregate {
+        path: args.path,
+        total_size_bytes: total_size,
+        file_count: total_count,
+        children: children.into_values().collect(),
     })
 }
 

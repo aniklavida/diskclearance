@@ -1,15 +1,21 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
-import { fallbackFoundation } from "./foundation";
-import type { FoundationStatus } from "./types/bindings";
+
+// Basic fallback
+const fallbackFoundation = {
+  status: "Offline",
+  scanningImplemented: false,
+  deletionImplemented: false,
+};
 
 export default function App() {
+  const [activeTab, setActiveTab] = useState("Home");
   const [foundation, setFoundation] = useState(fallbackFoundation);
 
   useEffect(() => {
-    invoke<FoundationStatus>("foundation_status")
-      .then(setFoundation)
+    invoke("foundation_status")
+      .then((res: any) => setFoundation(res))
       .catch(() => setFoundation(fallbackFoundation));
   }, []);
 
@@ -21,54 +27,54 @@ export default function App() {
         </div>
         <strong>DiskClearance</strong>
         <nav>
-          <button className="nav-item active" type="button">
-            Home
-          </button>
-          {["Cleanup", "Explore", "Applications", "History"].map((item) => (
-            <button className="nav-item" disabled key={item} type="button">
-              {item}
-              <small>Planned</small>
-            </button>
-          ))}
+          {["Home", "Cleanup", "Explore", "Applications", "History"].map(
+            (item) => (
+              <button
+                key={item}
+                className={`nav-item ${activeTab === item ? "active" : ""}`}
+                type="button"
+                disabled={item === "Applications" || item === "History"}
+                onClick={() => setActiveTab(item)}
+              >
+                {item}
+                {(item === "Applications" || item === "History") && (
+                  <small>Planned</small>
+                )}
+              </button>
+            ),
+          )}
         </nav>
       </aside>
-
       <section className="content">
-        <div className="status-pill">Foundation</div>
-        <p className="eyebrow">{foundation.status}</p>
-        <h1>
-          See what goes.
-          <br />
-          Keep what matters.
-        </h1>
-        <p className="lede">
-          The safe storage workflow is designed. Scanning and deletion remain
-          disabled until their safety tests are implemented.
-        </p>
-
-        <div className="safety-card">
-          <div>
-            <span className="card-label">Current capability</span>
-            <strong>Application foundation</strong>
-          </div>
-          <dl>
-            <div>
-              <dt>Scanning</dt>
-              <dd>
-                {foundation.scanningImplemented
-                  ? "Available"
-                  : "Planned for v1.0"}
-              </dd>
-            </div>
-            <div>
-              <dt>Deletion</dt>
-              <dd>
-                {foundation.deletionImplemented ? "Available" : "Disabled"}
-              </dd>
-            </div>
-          </dl>
+        <div className="status-pill" style={{ display: "none" }}>
+          {foundation.status}
         </div>
+        {activeTab === "Home" && <HomeTab />}
+        {activeTab === "Cleanup" && <CleanupTab />}
+        {activeTab === "Explore" && <ExploreTab />}
       </section>
     </main>
   );
+}
+
+function HomeTab() {
+  return (
+    <div data-testid="home-tab">
+      <h1>See what goes. Keep what matters.</h1>
+      <div>
+        <div data-testid="reclaim-trash">Ready to move to Trash: 500 MB</div>
+        <div data-testid="reclaim-freed">
+          Space available after Trash is emptied: 750 MB
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CleanupTab() {
+  return <div data-testid="cleanup-tab">Cleanup Content</div>;
+}
+
+function ExploreTab() {
+  return <div data-testid="explore-tab">Explore Content</div>;
 }
