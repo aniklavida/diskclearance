@@ -357,14 +357,146 @@ pub fn fetch_findings_page(
     })
 }
 
+pub fn fetch_folder_aggregate_core(
+    args: FetchFolderAggregateArgs,
+    database: &Arc<AppDatabase>,
+) -> Result<FolderAggregate, CommandError> {
+    let conn = database
+        .connection()
+        .lock()
+        .map_err(|e| CommandError::Unsupported {
+            feature: "fetch_folder_aggregate".into(),
+            reason: format!("db lock: {e}"),
+        })?;
+
+    let path_prefix = if args.path.ends_with('/') {
+        args.path.clone()
+    } else {
+        format!("{}/", args.path)
+    };
+    let pattern = format!("{}%", path_prefix);
+
+    let mut stmt = conn
+        .prepare("SELECT path, size_bytes FROM findings WHERE session_id = ? AND path LIKE ?")
+        .map_err(|e| CommandError::Unsupported {
+            feature: "aggregate".into(),
+            reason: e.to_string(),
+        })?;
+
+    let mut children = std::collections::HashMap::new();
+    let mut total_size = 0;
+    let mut total_count = 0;
+
+    let rows = stmt
+        .query_map(rusqlite::params![args.session_id, pattern], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)? as u64))
+        })
+        .map_err(|e| CommandError::Unsupported {
+            feature: "aggregate".into(),
+            reason: e.to_string(),
+        })?;
+
+    for row in rows {
+        if let Ok((path, size)) = row {
+            total_size += size;
+            total_count += 1;
+
+            if !path.starts_with(&path_prefix) {
+                continue;
+            }
+            let rel = &path[path_prefix.len()..];
+            let parts: Vec<&str> = rel.split('/').collect();
+            if parts.is_empty() || parts[0].is_empty() {
+                continue;
+            }
+            let is_dir = parts.len() > 1;
+            let name = parts[0].to_string();
+
+            let entry = children
+                .entry(name.clone())
+                .or_insert_with(|| FolderAggregateEntry {
+                    name: name.clone(),
+                    path: format!("{}{}", path_prefix, name),
+                    size_bytes: 0,
+                    file_count: 0,
+                    is_dir,
+                });
+            entry.size_bytes += size;
+            entry.file_count += 1;
+            entry.is_dir = entry.is_dir || is_dir;
+        }
+    }
+
+    Ok(FolderAggregate {
+        path: args.path,
+        total_size_bytes: total_size,
+        file_count: total_count,
+        children: children.into_values().collect(),
+    })
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct StorageReclamationReport {
+    pub pending_in_trash_bytes: u64,
+    pub permanently_reclaimed_bytes: u64,
+}
+
 #[tauri::command]
 pub fn fetch_folder_aggregate(
-    _args: FetchFolderAggregateArgs,
+    args: FetchFolderAggregateArgs,
+    database: tauri::State<'_, Arc<AppDatabase>>,
 ) -> Result<FolderAggregate, CommandError> {
-    // Folder aggregate exploration is planned for subsequent implementation.
-    Err(CommandError::Unsupported {
-        feature: "fetch_folder_aggregate".into(),
-        reason: "Folder aggregation is not implemented in this milestone".into(),
+    fetch_folder_aggregate_core(args, database.inner())
+}
+
+#[tauri::command]
+pub fn fetch_storage_reclamation_report(
+    session_id: String,
+    database: tauri::State<'_, Arc<AppDatabase>>,
+) -> Result<StorageReclamationReport, CommandError> {
+    fetch_storage_reclamation_report_core(session_id, database.inner())
+}
+
+pub fn fetch_storage_reclamation_report_core(
+    session_id: String,
+    database: &AppDatabase,
+) -> Result<StorageReclamationReport, CommandError> {
+    let conn = database
+        .connection()
+        .lock()
+        .map_err(|e| CommandError::Unsupported {
+            feature: "fetch_storage_reclamation_report".into(),
+            reason: e.to_string(),
+        })?;
+    let mut stmt = conn.prepare("SELECT safety_class, SUM(size_bytes) FROM findings WHERE session_id = ?1 GROUP BY safety_class").map_err(|e| CommandError::Unsupported { feature: "fetch_storage_reclamation_report".into(), reason: e.to_string() })?;
+
+    let mut pending_in_trash_bytes = 0;
+    let mut permanently_reclaimed_bytes = 0;
+
+    let rows = stmt
+        .query_map(rusqlite::params![session_id], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)? as u64))
+        })
+        .map_err(|e| CommandError::Unsupported {
+            feature: "fetch_storage_reclamation_report".into(),
+            reason: e.to_string(),
+        })?;
+
+    for row in rows {
+        if let Ok((class, size)) = row {
+            if class == "Review" || class == "Trash" {
+                pending_in_trash_bytes += size;
+            } else if class == "Rebuildable" || class == "PermanentDelete" {
+                permanently_reclaimed_bytes += size;
+            } else {
+                pending_in_trash_bytes += size;
+            }
+        }
+    }
+    Ok(StorageReclamationReport {
+        pending_in_trash_bytes,
+        permanently_reclaimed_bytes,
     })
 }
 
@@ -403,6 +535,145 @@ mod tests {
         fn emit_terminal(&mut self, payload: TerminalCompletionPayload) {
             self.terminals.lock().unwrap().push(payload);
         }
+    }
+
+    #[test]
+    #[test]
+    fn test_fetch_folder_aggregate_sums_correctly() {
+        let db = AppDatabase::open_in_memory().unwrap();
+        let conn = db.connection().lock().unwrap();
+
+        ScanSessionRepository::create_session(&conn, "sess-agg", "/").unwrap();
+
+        // Add findings to db:
+        ScanSessionRepository::insert_finding(
+            &conn,
+            "f1",
+            "sess-agg",
+            "/root/dir1/fileA.txt",
+            10,
+            "Review",
+            "Scanned",
+        )
+        .unwrap();
+        ScanSessionRepository::insert_finding(
+            &conn,
+            "f2",
+            "sess-agg",
+            "/root/dir1/fileB.txt",
+            20,
+            "Review",
+            "Scanned",
+        )
+        .unwrap();
+        ScanSessionRepository::insert_finding(
+            &conn,
+            "f3",
+            "sess-agg",
+            "/root/fileC.txt",
+            50,
+            "Review",
+            "Scanned",
+        )
+        .unwrap();
+        drop(conn);
+
+        let args = FetchFolderAggregateArgs {
+            session_id: "sess-agg".to_string(),
+            path: "/root".to_string(),
+        };
+        let res = fetch_folder_aggregate_core(args, &db).unwrap();
+
+        assert_eq!(res.total_size_bytes, 80);
+        assert_eq!(res.file_count, 3);
+
+        let dir1 = res.children.iter().find(|c| c.name == "dir1").unwrap();
+        assert_eq!(
+            dir1.size_bytes, 30,
+            "size must be a true sum, not last-write-wins"
+        );
+        assert_eq!(dir1.file_count, 2);
+        assert!(dir1.is_dir);
+
+        let file_c = res.children.iter().find(|c| c.name == "fileC.txt").unwrap();
+        assert_eq!(file_c.size_bytes, 50);
+        assert_eq!(file_c.file_count, 1);
+        assert!(!file_c.is_dir);
+    }
+
+    #[test]
+    fn test_fetch_storage_reclamation_report_totals() {
+        let db = AppDatabase::open_in_memory().unwrap();
+        let conn = db.connection().lock().unwrap();
+
+        ScanSessionRepository::create_session(&conn, "sess-report", "/").unwrap();
+
+        // Review/Trash
+        ScanSessionRepository::insert_finding(
+            &conn,
+            "f1",
+            "sess-report",
+            "/root/f1",
+            1013,
+            "Review",
+            "Scanned",
+        )
+        .unwrap();
+        ScanSessionRepository::insert_finding(
+            &conn,
+            "f2",
+            "sess-report",
+            "/root/f2",
+            2017,
+            "Trash",
+            "Scanned",
+        )
+        .unwrap();
+
+        // Rebuildable/PermanentDelete
+        ScanSessionRepository::insert_finding(
+            &conn,
+            "f3",
+            "sess-report",
+            "/root/f3",
+            3109,
+            "Rebuildable",
+            "Scanned",
+        )
+        .unwrap();
+        ScanSessionRepository::insert_finding(
+            &conn,
+            "f4",
+            "sess-report",
+            "/root/f4",
+            5003,
+            "PermanentDelete",
+            "Scanned",
+        )
+        .unwrap();
+        drop(conn);
+
+        let report = fetch_storage_reclamation_report_core("sess-report".to_string(), &db).unwrap();
+
+        let expected_pending = 1013 + 2017;
+        let expected_permanently = 3109 + 5003;
+
+        assert_eq!(report.pending_in_trash_bytes, expected_pending);
+        assert_eq!(report.permanently_reclaimed_bytes, expected_permanently);
+
+        // Guard against future regression
+        assert_ne!(
+            report.pending_in_trash_bytes,
+            report.permanently_reclaimed_bytes
+        );
+        assert_ne!(
+            report.pending_in_trash_bytes,
+            expected_pending + expected_permanently
+        );
+        assert_ne!(
+            report.permanently_reclaimed_bytes,
+            expected_pending + expected_permanently
+        );
     }
 
     #[test]

@@ -13,6 +13,7 @@ pub const DATABASE_FILENAME: &str = "diskclearance.db";
 pub const MIGRATIONS: &[(i64, &str)] = &[
     (1, MIGRATION_0001_FOUNDATION),
     (2, MIGRATION_0002_CORE_TABLES),
+    (3, MIGRATION_0003_REVIEW_PLANS),
 ];
 
 const MIGRATION_0001_FOUNDATION: &str = "
@@ -464,26 +465,26 @@ mod tests {
         let mut conn = Connection::open_in_memory().expect("in-memory database");
 
         let first_report = initialize(&mut conn).expect("initial migration");
-        assert_eq!(first_report.applied_versions, vec![1, 2]);
-        assert_eq!(first_report.current_version, 2);
+        assert_eq!(first_report.applied_versions, vec![1, 2, 3]);
+        assert_eq!(first_report.current_version, 3);
 
         let row_count: i64 = conn
             .query_row("SELECT COUNT(*) FROM schema_migrations", [], |row| {
                 row.get(0)
             })
             .expect("count migrations");
-        assert_eq!(row_count, 2);
+        assert_eq!(row_count, 3);
 
         let second_report = initialize(&mut conn).expect("second run should do nothing");
         assert!(second_report.applied_versions.is_empty());
-        assert_eq!(second_report.current_version, 2);
+        assert_eq!(second_report.current_version, 3);
 
         let row_count_after: i64 = conn
             .query_row("SELECT COUNT(*) FROM schema_migrations", [], |row| {
                 row.get(0)
             })
             .expect("count migrations after");
-        assert_eq!(row_count_after, 2);
+        assert_eq!(row_count_after, 3);
     }
 
     #[test]
@@ -541,7 +542,7 @@ mod tests {
                 max_known_version,
             }) => {
                 assert_eq!(found_version, 999);
-                assert_eq!(max_known_version, 2);
+                assert_eq!(max_known_version, 3);
             }
             other => panic!("expected DowngradeNotSupported, got {other:?}"),
         }
@@ -579,7 +580,7 @@ mod tests {
         let current_version = highest_applied_version(&conn)
             .expect("highest version")
             .expect("applied version");
-        assert_eq!(current_version, 2);
+        assert_eq!(current_version, 3);
     }
 
     #[test]
@@ -622,3 +623,27 @@ mod tests {
         assert!(success.is_ok());
     }
 }
+
+const MIGRATION_0003_REVIEW_PLANS: &str = "
+CREATE TABLE review_plans (
+    id TEXT PRIMARY KEY NOT NULL,
+    session_id TEXT NOT NULL REFERENCES scan_sessions(id) ON DELETE CASCADE,
+    default_action_mode TEXT NOT NULL,
+    created_at_ms INTEGER NOT NULL
+);
+
+CREATE TABLE plan_items (
+    item_id TEXT PRIMARY KEY NOT NULL,
+    plan_id TEXT NOT NULL REFERENCES review_plans(id) ON DELETE CASCADE,
+    original_path TEXT NOT NULL,
+    canonical_path TEXT NOT NULL,
+    device_id INTEGER NOT NULL,
+    inode INTEGER NOT NULL,
+    size_bytes INTEGER NOT NULL,
+    class_name TEXT NOT NULL,
+    rule_id TEXT NOT NULL,
+    rule_version INTEGER NOT NULL,
+    action_name TEXT NOT NULL,
+    recoverable INTEGER NOT NULL
+);
+";

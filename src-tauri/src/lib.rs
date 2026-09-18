@@ -38,6 +38,7 @@ pub fn run() {
             boundary::read::fetch_findings_page,
             boundary::read::fetch_folder_aggregate,
             boundary::read::fetch_application_inventory,
+            boundary::read::fetch_storage_reclamation_report,
             boundary::plan::build_plan,
             boundary::plan::fetch_plan,
             boundary::plan::revalidate_plan,
