@@ -137,6 +137,21 @@ where
                     message: reason,
                 });
             }
+            Err(PlatformError::Unsupported(what)) => {
+                // Filesystem identity is unavailable on this platform, so mount
+                // boundaries cannot be detected. Scanning is read-only and still
+                // useful here, so the walk proceeds — but the limitation is
+                // reported rather than papered over with an invented device id.
+                dir_stack.push((root.clone(), 0));
+                on_warning(CoverageWarningPayload {
+                    session_id: session_id.clone(),
+                    path: root.to_string_lossy().to_string(),
+                    warning_code: "mount_boundary_tracking_unavailable".to_string(),
+                    message: format!(
+                        "{what}; this scope was walked without mount-boundary detection"
+                    ),
+                });
+            }
             Err(err) => {
                 coverage.skipped_scopes.push(SkippedScope {
                     path: root.clone(),

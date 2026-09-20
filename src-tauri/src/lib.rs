@@ -43,6 +43,10 @@ pub fn run() {
             boundary::plan::fetch_plan,
             boundary::plan::revalidate_plan,
             boundary::destructive::execute_plan,
+            boundary::history::fetch_history_operations,
+            boundary::history::fetch_operation_detail,
+            boundary::history::restore_item,
+            boundary::history::fetch_lifetime_reclamation_totals,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

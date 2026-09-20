@@ -8,7 +8,11 @@ import {
   COMMAND_FETCH_FINDINGS_PAGE,
   COMMAND_FETCH_FOLDER_AGGREGATE,
   COMMAND_FETCH_PLAN,
+  COMMAND_FETCH_HISTORY_OPERATIONS,
+  COMMAND_FETCH_LIFETIME_RECLAMATION_TOTALS,
+  COMMAND_FETCH_OPERATION_DETAIL,
   COMMAND_FOUNDATION_STATUS,
+  COMMAND_RESTORE_ITEM,
   COMMAND_REVALIDATE_PLAN,
   COMMAND_START_SCAN,
   EVENT_COVERAGE_WARNING,
@@ -26,10 +30,17 @@ import {
   type ExecutionSummary,
   type FetchFindingsPageArgs,
   type FetchFolderAggregateArgs,
+  type FetchHistoryOperationsArgs,
+  type FetchOperationDetailArgs,
   type FetchPlanArgs,
   type FindingsPage,
   type FolderAggregate,
   type FoundationStatus,
+  type HistoryOperationDetail,
+  type HistoryOperationSummary,
+  type LifetimeReclamationTotals,
+  type RestoreItemArgs,
+  type RestoreItemSummary,
   type ReviewPlan,
   type ReviewPlanHeader,
   type RevalidatePlanArgs,
@@ -101,6 +112,37 @@ export async function invokeExecutePlan(
   args: ExecutePlanArgs,
 ): Promise<ExecutionSummary> {
   return invoke<ExecutionSummary>(COMMAND_EXECUTE_PLAN, { args });
+}
+
+// --- Typed History and Restore Commands ---
+
+export async function invokeFetchHistoryOperations(
+  args: FetchHistoryOperationsArgs,
+): Promise<Array<HistoryOperationSummary>> {
+  return invoke<Array<HistoryOperationSummary>>(
+    COMMAND_FETCH_HISTORY_OPERATIONS,
+    { args },
+  );
+}
+
+export async function invokeFetchOperationDetail(
+  args: FetchOperationDetailArgs,
+): Promise<HistoryOperationDetail> {
+  return invoke<HistoryOperationDetail>(COMMAND_FETCH_OPERATION_DETAIL, {
+    args,
+  });
+}
+
+export async function invokeRestoreItem(
+  args: RestoreItemArgs,
+): Promise<RestoreItemSummary> {
+  return invoke<RestoreItemSummary>(COMMAND_RESTORE_ITEM, { args });
+}
+
+export async function invokeFetchLifetimeReclamationTotals(): Promise<LifetimeReclamationTotals> {
+  return invoke<LifetimeReclamationTotals>(
+    COMMAND_FETCH_LIFETIME_RECLAMATION_TOTALS,
+  );
 }
 
 // --- Typed Event Listeners ---

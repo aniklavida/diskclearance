@@ -149,9 +149,33 @@ impl PlatformAdapter for ClassificationTestAdapter {
 
     fn check_trashed_item_exists(
         &self,
-        _item: &TrashedItem,
+        item: &TrashedItem,
     ) -> Result<TrashedItemStatus, PlatformError> {
-        Err(PlatformError::Unsupported("trash"))
+        if item.trashed_path.exists() {
+            Ok(TrashedItemStatus::Present(item.clone()))
+        } else {
+            Ok(TrashedItemStatus::Missing(item.trashed_path.clone()))
+        }
+    }
+
+    fn restore_from_trash(
+        &self,
+        trashed_path: &Path,
+        destination_path: &Path,
+    ) -> Result<(), PlatformError> {
+        if destination_path.exists() {
+            return Err(PlatformError::Io(format!(
+                "Destination '{}' already exists; refusing to overwrite",
+                destination_path.display()
+            )));
+        }
+        if let Some(parent) = destination_path.parent() {
+            if !parent.exists() {
+                std::fs::create_dir_all(parent).map_err(|e| PlatformError::Io(e.to_string()))?;
+            }
+        }
+        std::fs::rename(trashed_path, destination_path)
+            .map_err(|e| PlatformError::Io(e.to_string()))
     }
 
     fn application_metadata(
@@ -173,10 +197,9 @@ impl PlatformAdapter for ClassificationTestAdapter {
         }
         #[cfg(not(unix))]
         {
-            Ok(FileIdentity {
-                device_id: 1,
-                inode: 100,
-            })
+            Err(PlatformError::Unsupported(
+                "filesystem identity (device_id and inode) is not available on this platform",
+            ))
         }
     }
 
@@ -245,10 +268,14 @@ impl PlatformAdapter for ClassificationTestAdapter {
         }
         #[cfg(not(unix))]
         {
+            let (dev, ino) = match self.file_identity(path) {
+                Ok(id) => (id.device_id, id.inode),
+                Err(_) => (0, 0),
+            };
             Ok(EntryMetadata {
                 identity: FileIdentity {
-                    device_id: 1,
-                    inode: 100,
+                    device_id: dev,
+                    inode: ino,
                 },
                 entry_type,
                 apparent_size: meta.len(),
