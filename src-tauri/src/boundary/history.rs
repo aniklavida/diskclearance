@@ -976,6 +976,10 @@ mod tests {
     use crate::storage::open_database_at_path;
 
     // Test 1: Operations and per-item outcomes persist across an application restart.
+    // Unix-only: executing Trash actions requires pre-execution revalidation of
+    // filesystem identity (device id and inode) and platform Trash semantics, which
+    // the Windows platform adapter declares unsupported.
+    #[cfg(unix)]
     #[test]
     fn test_operations_and_item_outcomes_persist_across_application_restart() {
         let fixture = DisposableFixtureTree::new("restart-persist");
@@ -1092,6 +1096,11 @@ mod tests {
     }
 
     // Test 2: A test empties the fixture Trash and asserts the affected items become ineligible with a stated reason rather than disappearing.
+    // Unix-only: verifying restore eligibility requires filesystem identity (device id
+    // and inode) and Trash lifecycle semantics, which have no equivalent available on
+    // Windows. The Windows platform adapter already declares `file_identity` and
+    // `restore_from_trash` unsupported.
+    #[cfg(unix)]
     #[test]
     fn test_emptied_trash_renders_item_ineligible_with_stated_reason_without_disappearing() {
         let fixture = DisposableFixtureTree::new("empty-trash");
@@ -1197,6 +1206,10 @@ mod tests {
     }
 
     // Test 3: A test renames a trashed item and asserts it is ineligible — identity, not name, decides.
+    // Unix-only: filesystem identity (device id and inode) has no equivalent
+    // available here, and the Windows platform adapter already declares
+    // `file_identity` and `restore_from_trash` unsupported.
+    #[cfg(unix)]
     #[test]
     fn test_renamed_or_swapped_trash_item_is_ineligible_identity_not_name_decides() {
         let fixture = DisposableFixtureTree::new("rename-trash");
@@ -1295,6 +1308,10 @@ mod tests {
     }
 
     // Test 4: A restore into an occupied destination never overwrites; a test asserts the original occupant is untouched, byte for byte.
+    // Unix-only: restore operations require verifying filesystem identity in Trash and
+    // invoking restore_from_trash, both of which the Windows platform adapter declares
+    // unsupported.
+    #[cfg(unix)]
     #[test]
     fn test_restore_into_occupied_destination_never_overwrites_original_occupant() {
         let fixture = DisposableFixtureTree::new("restore-overwrite-test");
@@ -1405,6 +1422,10 @@ mod tests {
     }
 
     // Test 5: A restore is itself recorded as an outcome and the preceding operation's record is unchanged.
+    // Unix-only: restore operations require verifying filesystem identity in Trash and
+    // invoking restore_from_trash, both of which the Windows platform adapter declares
+    // unsupported.
+    #[cfg(unix)]
     #[test]
     fn test_restore_recorded_as_own_outcome_preceding_operation_unchanged() {
         let fixture = DisposableFixtureTree::new("restore-preceding-unchanged");
@@ -1525,6 +1546,10 @@ mod tests {
     }
 
     // Test 6: Pending and permanently-reclaimed totals are asserted separate all the way from schema to rendered figure.
+    // Unix-only: executing plan actions in Trash and PermanentDelete modes requires
+    // pre-execution revalidation of filesystem identity (device id and inode), which
+    // the Windows platform adapter declares unsupported.
+    #[cfg(unix)]
     #[test]
     fn test_pending_and_permanently_reclaimed_totals_asserted_separate_schema_and_api() {
         let fixture = DisposableFixtureTree::new("separate-totals");
@@ -1661,7 +1686,49 @@ mod tests {
         );
     }
 
+    // Cross-platform schema verification: asserts operations and history tables carry distinct
+    // pending-trash and permanent-reclamation columns without requiring platform execution adapters.
+    #[test]
+    fn test_operations_and_history_schema_columns() {
+        let db = AppDatabase::open_in_memory().unwrap();
+        let conn = db.connection().lock().unwrap();
+
+        let op_columns: Vec<String> = {
+            let mut stmt = conn.prepare("PRAGMA table_info(operations)").unwrap();
+            stmt.query_map([], |row| row.get::<_, String>(1))
+                .unwrap()
+                .map(|r| r.unwrap())
+                .collect()
+        };
+        assert!(
+            op_columns.contains(&"bytes_pending_trash".to_string()),
+            "Schema must have bytes_pending_trash"
+        );
+        assert!(
+            op_columns.contains(&"bytes_permanently_reclaimed".to_string()),
+            "Schema must have bytes_permanently_reclaimed"
+        );
+        assert!(
+            !op_columns.contains(&"total_bytes_freed".to_string()),
+            "Schema must NOT have conflated total column"
+        );
+
+        let item_columns: Vec<String> = {
+            let mut stmt = conn.prepare("PRAGMA table_info(operation_items)").unwrap();
+            stmt.query_map([], |row| row.get::<_, String>(1))
+                .unwrap()
+                .map(|r| r.unwrap())
+                .collect()
+        };
+        assert!(item_columns.contains(&"bytes_pending_trash".to_string()));
+        assert!(item_columns.contains(&"bytes_permanently_reclaimed".to_string()));
+    }
+
     // Test 7: A permanently deleted item is unrepresentable in the restore flow.
+    // Unix-only: executing permanent deletion requires pre-execution revalidation of
+    // filesystem identity (device id and inode), and restore capabilities are unsupported
+    // on Windows.
+    #[cfg(unix)]
     #[test]
     fn test_permanently_deleted_item_is_structurally_unrepresentable_in_restore_flow() {
         let fixture = DisposableFixtureTree::new("perm-delete-unrep");

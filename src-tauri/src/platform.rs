@@ -1114,16 +1114,21 @@ pub mod tests {
                 }
                 #[cfg(not(unix))]
                 {
-                    Ok(FileIdentity {
-                        device_id: 1,
-                        inode: 100,
-                    })
+                    Err(PlatformError::Unsupported(
+                        "filesystem identity (device_id and inode) is not available on this platform",
+                    ))
                 }
             } else {
-                Ok(FileIdentity {
-                    device_id: 1,
-                    inode: 100,
-                })
+                #[cfg(unix)]
+                {
+                    Err(PlatformError::NotFound(path.to_path_buf()))
+                }
+                #[cfg(not(unix))]
+                {
+                    Err(PlatformError::Unsupported(
+                        "filesystem identity (device_id and inode) is not available on this platform",
+                    ))
+                }
             }
         }
 
@@ -1224,7 +1229,10 @@ pub mod tests {
                     (meta.dev(), meta.ino(), meta.blocks() * 512, meta.nlink())
                 };
                 #[cfg(not(unix))]
-                let (dev, ino, allocated_size, nlink) = (1, 100, meta.len(), 1);
+                let (dev, ino, allocated_size, nlink) = match self.file_identity(path) {
+                    Ok(id) => (id.device_id, id.inode, meta.len(), 1),
+                    Err(_) => (0, 0, meta.len(), 1),
+                };
 
                 let modified_ms = meta
                     .modified()

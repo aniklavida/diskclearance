@@ -197,10 +197,9 @@ impl PlatformAdapter for ClassificationTestAdapter {
         }
         #[cfg(not(unix))]
         {
-            Ok(FileIdentity {
-                device_id: 1,
-                inode: 100,
-            })
+            Err(PlatformError::Unsupported(
+                "filesystem identity (device_id and inode) is not available on this platform",
+            ))
         }
     }
 
@@ -269,10 +268,14 @@ impl PlatformAdapter for ClassificationTestAdapter {
         }
         #[cfg(not(unix))]
         {
+            let (dev, ino) = match self.file_identity(path) {
+                Ok(id) => (id.device_id, id.inode),
+                Err(_) => (0, 0),
+            };
             Ok(EntryMetadata {
                 identity: FileIdentity {
-                    device_id: 1,
-                    inode: 100,
+                    device_id: dev,
+                    inode: ino,
                 },
                 entry_type,
                 apparent_size: meta.len(),
