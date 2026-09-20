@@ -98,6 +98,8 @@ pub fn generate_typescript_bindings() -> String {
     out.push_str("// Destructive capability\n");
     emit_type!(ActionMode);
     emit_type!(ExecutePlanArgs);
+    emit_type!(ItemOutcomeStatus);
+    emit_type!(ItemOutcomeRecord);
     emit_type!(ExecutionSummary);
 
     out
