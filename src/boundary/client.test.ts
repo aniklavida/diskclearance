@@ -6,8 +6,12 @@ import {
   invokeFetchApplicationInventory,
   invokeFetchFindingsPage,
   invokeFetchFolderAggregate,
+  invokeFetchHistoryOperations,
+  invokeFetchLifetimeReclamationTotals,
+  invokeFetchOperationDetail,
   invokeFetchPlan,
   invokeFoundationStatus,
+  invokeRestoreItem,
   invokeRevalidatePlan,
   invokeStartScan,
   subscribeCoverageWarning,
@@ -23,8 +27,12 @@ import {
   COMMAND_FETCH_APPLICATION_INVENTORY,
   COMMAND_FETCH_FINDINGS_PAGE,
   COMMAND_FETCH_FOLDER_AGGREGATE,
+  COMMAND_FETCH_HISTORY_OPERATIONS,
+  COMMAND_FETCH_LIFETIME_RECLAMATION_TOTALS,
+  COMMAND_FETCH_OPERATION_DETAIL,
   COMMAND_FETCH_PLAN,
   COMMAND_FOUNDATION_STATUS,
+  COMMAND_RESTORE_ITEM,
   COMMAND_REVALIDATE_PLAN,
   COMMAND_START_SCAN,
   EVENT_COVERAGE_WARNING,
@@ -200,6 +208,113 @@ describe("boundary client commands", () => {
     const summary = await invokeExecutePlan(args);
     expect(invoke).toHaveBeenCalledWith(COMMAND_EXECUTE_PLAN, { args });
     expect(summary.planId).toBe("p-secure-99");
+  });
+
+  it("dispatches fetch_history_operations with typed filters", async () => {
+    vi.mocked(invoke).mockResolvedValueOnce([
+      {
+        id: "op-1",
+        planId: "p1",
+        actionMode: "trash",
+        createdAtMs: 100n,
+        completedAtMs: 105n,
+        succeededItems: 1n,
+        failedItems: 0n,
+        skippedItems: 0n,
+        blockedItems: 0n,
+        vanishedItems: 0n,
+        permissionDeniedItems: 0n,
+        bytesPendingTrash: 500n,
+        bytesPermanentlyReclaimed: 0n,
+        totalItems: 1n,
+      },
+    ]);
+
+    const ops = await invokeFetchHistoryOperations({
+      outcomeFilter: "succeeded",
+      dateFromMs: 0n,
+      dateToMs: 200n,
+    });
+    expect(invoke).toHaveBeenCalledWith(COMMAND_FETCH_HISTORY_OPERATIONS, {
+      args: {
+        outcomeFilter: "succeeded",
+        dateFromMs: 0n,
+        dateToMs: 200n,
+      },
+    });
+    expect(ops).toHaveLength(1);
+    expect(ops[0].id).toBe("op-1");
+  });
+
+  it("dispatches fetch_operation_detail with operationId and outcomeFilter", async () => {
+    vi.mocked(invoke).mockResolvedValueOnce({
+      operation: {
+        id: "op-1",
+        planId: "p1",
+        actionMode: "trash",
+        createdAtMs: 100n,
+        completedAtMs: 105n,
+        succeededItems: 1n,
+        failedItems: 0n,
+        skippedItems: 0n,
+        blockedItems: 0n,
+        vanishedItems: 0n,
+        permissionDeniedItems: 0n,
+        bytesPendingTrash: 500n,
+        bytesPermanentlyReclaimed: 0n,
+        totalItems: 1n,
+      },
+      items: [],
+    });
+
+    const detail = await invokeFetchOperationDetail({
+      operationId: "op-1",
+      outcomeFilter: null,
+    });
+    expect(invoke).toHaveBeenCalledWith(COMMAND_FETCH_OPERATION_DETAIL, {
+      args: {
+        operationId: "op-1",
+        outcomeFilter: null,
+      },
+    });
+    expect(detail.operation.id).toBe("op-1");
+  });
+
+  it("dispatches restore_item with operationItemId and alternateDestination", async () => {
+    vi.mocked(invoke).mockResolvedValueOnce({
+      restoreId: "res-1",
+      operationItemId: "item-1",
+      restoredToPath: "/restored/file.txt",
+      sizeBytes: 500n,
+      restoredAtMs: 200n,
+    });
+
+    const res = await invokeRestoreItem({
+      operationItemId: "item-1",
+      alternateDestination: "/restored/file.txt",
+    });
+    expect(invoke).toHaveBeenCalledWith(COMMAND_RESTORE_ITEM, {
+      args: {
+        operationItemId: "item-1",
+        alternateDestination: "/restored/file.txt",
+      },
+    });
+    expect(res.restoreId).toBe("res-1");
+    expect(res.restoredToPath).toBe("/restored/file.txt");
+  });
+
+  it("dispatches fetch_lifetime_reclamation_totals", async () => {
+    vi.mocked(invoke).mockResolvedValueOnce({
+      pendingInTrashBytes: 500n,
+      permanentlyReclaimedBytes: 1000n,
+    });
+
+    const totals = await invokeFetchLifetimeReclamationTotals();
+    expect(invoke).toHaveBeenCalledWith(
+      COMMAND_FETCH_LIFETIME_RECLAMATION_TOTALS,
+    );
+    expect(totals.pendingInTrashBytes).toBe(500n);
+    expect(totals.permanentlyReclaimedBytes).toBe(1000n);
   });
 });
 

@@ -14,6 +14,7 @@ pub const MIGRATIONS: &[(i64, &str)] = &[
     (1, MIGRATION_0001_FOUNDATION),
     (2, MIGRATION_0002_CORE_TABLES),
     (3, MIGRATION_0003_REVIEW_PLANS),
+    (4, MIGRATION_0004_OPERATIONS_AND_HISTORY),
 ];
 
 const MIGRATION_0001_FOUNDATION: &str = "
@@ -465,26 +466,26 @@ mod tests {
         let mut conn = Connection::open_in_memory().expect("in-memory database");
 
         let first_report = initialize(&mut conn).expect("initial migration");
-        assert_eq!(first_report.applied_versions, vec![1, 2, 3]);
-        assert_eq!(first_report.current_version, 3);
+        assert_eq!(first_report.applied_versions, vec![1, 2, 3, 4]);
+        assert_eq!(first_report.current_version, 4);
 
         let row_count: i64 = conn
             .query_row("SELECT COUNT(*) FROM schema_migrations", [], |row| {
                 row.get(0)
             })
             .expect("count migrations");
-        assert_eq!(row_count, 3);
+        assert_eq!(row_count, 4);
 
         let second_report = initialize(&mut conn).expect("second run should do nothing");
         assert!(second_report.applied_versions.is_empty());
-        assert_eq!(second_report.current_version, 3);
+        assert_eq!(second_report.current_version, 4);
 
         let row_count_after: i64 = conn
             .query_row("SELECT COUNT(*) FROM schema_migrations", [], |row| {
                 row.get(0)
             })
             .expect("count migrations after");
-        assert_eq!(row_count_after, 3);
+        assert_eq!(row_count_after, 4);
     }
 
     #[test]
@@ -542,7 +543,7 @@ mod tests {
                 max_known_version,
             }) => {
                 assert_eq!(found_version, 999);
-                assert_eq!(max_known_version, 3);
+                assert_eq!(max_known_version, 4);
             }
             other => panic!("expected DowngradeNotSupported, got {other:?}"),
         }
@@ -580,7 +581,7 @@ mod tests {
         let current_version = highest_applied_version(&conn)
             .expect("highest version")
             .expect("applied version");
-        assert_eq!(current_version, 3);
+        assert_eq!(current_version, 4);
     }
 
     #[test]
@@ -646,4 +647,58 @@ CREATE TABLE plan_items (
     action_name TEXT NOT NULL,
     recoverable INTEGER NOT NULL
 );
+";
+
+const MIGRATION_0004_OPERATIONS_AND_HISTORY: &str = "
+CREATE TABLE operations (
+    id TEXT PRIMARY KEY NOT NULL,
+    plan_id TEXT NOT NULL REFERENCES review_plans(id),
+    action_mode TEXT NOT NULL,
+    created_at_ms INTEGER NOT NULL,
+    completed_at_ms INTEGER NOT NULL,
+    succeeded_items INTEGER NOT NULL DEFAULT 0,
+    failed_items INTEGER NOT NULL DEFAULT 0,
+    skipped_items INTEGER NOT NULL DEFAULT 0,
+    blocked_items INTEGER NOT NULL DEFAULT 0,
+    vanished_items INTEGER NOT NULL DEFAULT 0,
+    permission_denied_items INTEGER NOT NULL DEFAULT 0,
+    bytes_pending_trash INTEGER NOT NULL DEFAULT 0,
+    bytes_permanently_reclaimed INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE operation_items (
+    id TEXT PRIMARY KEY NOT NULL,
+    operation_id TEXT NOT NULL REFERENCES operations(id) ON DELETE CASCADE,
+    item_id TEXT NOT NULL,
+    original_path TEXT NOT NULL,
+    canonical_path TEXT NOT NULL,
+    trashed_path TEXT,
+    device_id INTEGER NOT NULL,
+    inode INTEGER NOT NULL,
+    size_bytes INTEGER NOT NULL,
+    status TEXT NOT NULL,
+    bytes_pending_trash INTEGER NOT NULL DEFAULT 0,
+    bytes_permanently_reclaimed INTEGER NOT NULL DEFAULT 0,
+    error_message TEXT,
+    created_at_ms INTEGER NOT NULL
+);
+
+CREATE INDEX idx_operation_items_op_id ON operation_items(operation_id);
+CREATE INDEX idx_operation_items_status ON operation_items(status);
+CREATE INDEX idx_operations_created_at ON operations(created_at_ms);
+
+CREATE TABLE restore_outcomes (
+    id TEXT PRIMARY KEY NOT NULL,
+    operation_item_id TEXT NOT NULL REFERENCES operation_items(id) ON DELETE CASCADE,
+    source_trashed_path TEXT NOT NULL,
+    restored_to_path TEXT NOT NULL,
+    device_id INTEGER NOT NULL,
+    inode INTEGER NOT NULL,
+    size_bytes INTEGER NOT NULL,
+    status TEXT NOT NULL,
+    error_message TEXT,
+    restored_at_ms INTEGER NOT NULL
+);
+
+CREATE INDEX idx_restore_outcomes_item_id ON restore_outcomes(operation_item_id);
 ";

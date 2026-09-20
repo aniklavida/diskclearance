@@ -48,7 +48,13 @@ pub fn generate_typescript_bindings() -> String {
     out.push_str("export const COMMAND_BUILD_PLAN = \"build_plan\";\n");
     out.push_str("export const COMMAND_FETCH_PLAN = \"fetch_plan\";\n");
     out.push_str("export const COMMAND_REVALIDATE_PLAN = \"revalidate_plan\";\n");
-    out.push_str("export const COMMAND_EXECUTE_PLAN = \"execute_plan\";\n\n");
+    out.push_str("export const COMMAND_EXECUTE_PLAN = \"execute_plan\";\n");
+    out.push_str("export const COMMAND_FETCH_HISTORY_OPERATIONS = \"fetch_history_operations\";\n");
+    out.push_str("export const COMMAND_FETCH_OPERATION_DETAIL = \"fetch_operation_detail\";\n");
+    out.push_str("export const COMMAND_RESTORE_ITEM = \"restore_item\";\n");
+    out.push_str(
+        "export const COMMAND_FETCH_LIFETIME_RECLAMATION_TOTALS = \"fetch_lifetime_reclamation_totals\";\n\n",
+    );
 
     // Types
     macro_rules! emit_type {
@@ -101,6 +107,19 @@ pub fn generate_typescript_bindings() -> String {
     emit_type!(ItemOutcomeStatus);
     emit_type!(ItemOutcomeRecord);
     emit_type!(ExecutionSummary);
+
+    out.push_str("// History and restore capability\n");
+    emit_type!(crate::boundary::history::FetchHistoryOperationsArgs);
+    emit_type!(crate::boundary::history::HistoryOperationSummary);
+    emit_type!(crate::boundary::history::FetchOperationDetailArgs);
+    emit_type!(crate::boundary::history::RestoreEligibility);
+    emit_type!(crate::boundary::history::TrashHistoryItemDetail);
+    emit_type!(crate::boundary::history::PermanentDeleteHistoryItemDetail);
+    emit_type!(crate::boundary::history::HistoryItemDetail);
+    emit_type!(crate::boundary::history::HistoryOperationDetail);
+    emit_type!(crate::boundary::history::RestoreItemArgs);
+    emit_type!(crate::boundary::history::RestoreItemSummary);
+    emit_type!(crate::boundary::history::LifetimeReclamationTotals);
 
     out
 }

@@ -197,6 +197,11 @@ pub trait PlatformAdapter: Send + Sync {
         &self,
         item: &TrashedItem,
     ) -> Result<TrashedItemStatus, PlatformError>;
+    fn restore_from_trash(
+        &self,
+        trashed_path: &Path,
+        destination_path: &Path,
+    ) -> Result<(), PlatformError>;
 
     // --- Application metadata ---
     fn application_metadata(&self, path: &Path) -> Result<ApplicationMetadata, PlatformError>;
@@ -276,6 +281,14 @@ impl PlatformAdapter for UnsupportedAdapter {
         _item: &TrashedItem,
     ) -> Result<TrashedItemStatus, PlatformError> {
         Err(PlatformError::Unsupported("check_trashed_item_exists"))
+    }
+
+    fn restore_from_trash(
+        &self,
+        _trashed_path: &Path,
+        _destination_path: &Path,
+    ) -> Result<(), PlatformError> {
+        Err(PlatformError::Unsupported("restore_from_trash"))
     }
 
     fn application_metadata(&self, _path: &Path) -> Result<ApplicationMetadata, PlatformError> {
@@ -540,11 +553,33 @@ function run(argv) {
 
     fn check_trashed_item_exists(
         &self,
-        _item: &TrashedItem,
+        item: &TrashedItem,
     ) -> Result<TrashedItemStatus, PlatformError> {
-        Err(PlatformError::Unsupported(
-            "check_trashed_item_exists is not yet implemented (planned for a future history/restore milestone)",
-        ))
+        if item.trashed_path.exists() || item.trashed_path.is_symlink() {
+            Ok(TrashedItemStatus::Present(item.clone()))
+        } else {
+            Ok(TrashedItemStatus::Missing(item.trashed_path.clone()))
+        }
+    }
+
+    fn restore_from_trash(
+        &self,
+        trashed_path: &Path,
+        destination_path: &Path,
+    ) -> Result<(), PlatformError> {
+        if destination_path.exists() {
+            return Err(PlatformError::Io(format!(
+                "Destination '{}' already exists; refusing to overwrite",
+                destination_path.display()
+            )));
+        }
+        if let Some(parent) = destination_path.parent() {
+            if !parent.exists() {
+                std::fs::create_dir_all(parent).map_err(|e| PlatformError::Io(e.to_string()))?;
+            }
+        }
+        std::fs::rename(trashed_path, destination_path)
+            .map_err(|e| PlatformError::Io(e.to_string()))
     }
 
     fn application_metadata(&self, _path: &Path) -> Result<ApplicationMetadata, PlatformError> {
@@ -728,6 +763,14 @@ impl PlatformAdapter for WindowsAdapter {
         Err(PlatformError::Unsupported(
             "check_trashed_item_exists on Windows",
         ))
+    }
+
+    fn restore_from_trash(
+        &self,
+        _trashed_path: &Path,
+        _destination_path: &Path,
+    ) -> Result<(), PlatformError> {
+        Err(PlatformError::Unsupported("restore_from_trash on Windows"))
     }
 
     fn application_metadata(&self, _path: &Path) -> Result<ApplicationMetadata, PlatformError> {
@@ -989,14 +1032,18 @@ pub mod tests {
         }
 
         fn move_to_trash(&self, path: &Path) -> Result<TrashedItem, PlatformError> {
+            let filename = path.file_name().unwrap_or_default();
+            let trashed_path = self.trash.join(filename);
+            if path.exists() {
+                if let Some(parent) = trashed_path.parent() {
+                    let _ = std::fs::create_dir_all(parent);
+                }
+                let _ = std::fs::rename(path, &trashed_path);
+            }
             let item = TrashedItem {
-                trashed_path: self.trash.join(path.file_name().unwrap_or_default()),
+                trashed_path,
                 original_path: path.to_path_buf(),
-                display_name: path
-                    .file_name()
-                    .unwrap_or_default()
-                    .to_string_lossy()
-                    .to_string(),
+                display_name: filename.to_string_lossy().to_string(),
             };
             self.trashed_items.lock().unwrap().push(item.clone());
             Ok(item)
@@ -1016,6 +1063,31 @@ pub mod tests {
             } else {
                 Ok(TrashedItemStatus::Missing(item.trashed_path.clone()))
             }
+        }
+
+        fn restore_from_trash(
+            &self,
+            trashed_path: &Path,
+            destination_path: &Path,
+        ) -> Result<(), PlatformError> {
+            if destination_path.exists() {
+                return Err(PlatformError::Io(format!(
+                    "Destination '{}' already exists; refusing to overwrite",
+                    destination_path.display()
+                )));
+            }
+            if let Some(parent) = destination_path.parent() {
+                if !parent.exists() {
+                    let _ = std::fs::create_dir_all(parent);
+                }
+            }
+            if trashed_path.exists() {
+                std::fs::rename(trashed_path, destination_path)
+                    .map_err(|e| PlatformError::Io(e.to_string()))?;
+            }
+            let mut items = self.trashed_items.lock().unwrap();
+            items.retain(|i| i.trashed_path != trashed_path);
+            Ok(())
         }
 
         fn application_metadata(&self, path: &Path) -> Result<ApplicationMetadata, PlatformError> {
@@ -1326,6 +1398,10 @@ pub mod tests {
         assert_eq!(
             adapter.check_trashed_item_exists(&dummy_trashed),
             Err(PlatformError::Unsupported("check_trashed_item_exists"))
+        );
+        assert_eq!(
+            adapter.restore_from_trash(Path::new("/dummy/trash"), Path::new("/dummy/dest")),
+            Err(PlatformError::Unsupported("restore_from_trash"))
         );
         assert_eq!(
             adapter.application_metadata(Path::new("/dummy.app")),

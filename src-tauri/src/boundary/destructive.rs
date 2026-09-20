@@ -45,6 +45,8 @@ pub struct ItemOutcomeRecord {
     pub bytes_reclaimed: u64,
     pub bytes_pending_trash: u64,
     pub error_message: Option<String>,
+    #[serde(default)]
+    pub trashed_path: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -61,6 +63,8 @@ pub struct ExecutionSummary {
     pub vanished_items: u64,
     pub permission_denied_items: u64,
     pub item_outcomes: Vec<ItemOutcomeRecord>,
+    #[serde(default)]
+    pub operation_id: Option<String>,
 }
 
 fn is_item_protected(
@@ -228,6 +232,11 @@ pub fn execute_plan_core(
             .unwrap_or_else(|| reg.register(&args.plan_id))
     });
 
+    let started_at_ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis() as u64;
+
     let mut item_outcomes = Vec::new();
     let mut succeeded_items = 0u64;
     let mut failed_items = 0u64;
@@ -252,6 +261,7 @@ pub fn execute_plan_core(
                         error_message: Some(
                             "Operation cancelled before item execution".to_string(),
                         ),
+                        trashed_path: None,
                     });
                 }
                 break;
@@ -272,6 +282,7 @@ pub fn execute_plan_core(
                     bytes_reclaimed: 0,
                     bytes_pending_trash: 0,
                     error_message: Some("Path vanished before execution".to_string()),
+                    trashed_path: None,
                 });
                 continue;
             }
@@ -285,6 +296,7 @@ pub fn execute_plan_core(
                     bytes_reclaimed: 0,
                     bytes_pending_trash: 0,
                     error_message: Some(reason),
+                    trashed_path: None,
                 });
                 continue;
             }
@@ -297,6 +309,7 @@ pub fn execute_plan_core(
                     bytes_reclaimed: 0,
                     bytes_pending_trash: 0,
                     error_message: Some(err.to_string()),
+                    trashed_path: None,
                 });
                 continue;
             }
@@ -318,6 +331,7 @@ pub fn execute_plan_core(
                     metadata.identity.device_id,
                     metadata.identity.inode
                 )),
+                trashed_path: None,
             });
             continue;
         }
@@ -334,6 +348,7 @@ pub fn execute_plan_core(
                     bytes_reclaimed: 0,
                     bytes_pending_trash: 0,
                     error_message: Some(err.to_string()),
+                    trashed_path: None,
                 });
                 continue;
             }
@@ -352,6 +367,7 @@ pub fn execute_plan_core(
                     item.canonical_path.display(),
                     resolved.canonical.display()
                 )),
+                trashed_path: None,
             });
             continue;
         }
@@ -366,6 +382,7 @@ pub fn execute_plan_core(
                 bytes_reclaimed: 0,
                 bytes_pending_trash: 0,
                 error_message: Some("Target was replaced by a symlink after review".to_string()),
+                trashed_path: None,
             });
             continue;
         }
@@ -380,6 +397,7 @@ pub fn execute_plan_core(
                 bytes_reclaimed: 0,
                 bytes_pending_trash: 0,
                 error_message: Some("Target matched a protected root descriptor".to_string()),
+                trashed_path: None,
             });
             continue;
         }
@@ -387,7 +405,7 @@ pub fn execute_plan_core(
         // 4. Perform vetted execution action
         match args.action_mode {
             ActionMode::Trash => match adapter.move_to_trash(&item.original_path) {
-                Ok(_trashed) => {
+                Ok(trashed) => {
                     succeeded_items += 1;
                     bytes_pending_trash += item.size_bytes;
                     item_outcomes.push(ItemOutcomeRecord {
@@ -397,6 +415,7 @@ pub fn execute_plan_core(
                         bytes_reclaimed: 0,
                         bytes_pending_trash: item.size_bytes,
                         error_message: None,
+                        trashed_path: Some(trashed.trashed_path.to_string_lossy().to_string()),
                     });
                 }
                 Err(PlatformError::PermissionDenied { reason, .. }) => {
@@ -409,6 +428,7 @@ pub fn execute_plan_core(
                         bytes_reclaimed: 0,
                         bytes_pending_trash: 0,
                         error_message: Some(reason),
+                        trashed_path: None,
                     });
                 }
                 Err(err) => {
@@ -420,6 +440,7 @@ pub fn execute_plan_core(
                         bytes_reclaimed: 0,
                         bytes_pending_trash: 0,
                         error_message: Some(err.to_string()),
+                        trashed_path: None,
                     });
                 }
             },
@@ -450,6 +471,7 @@ pub fn execute_plan_core(
                             bytes_reclaimed: item.size_bytes,
                             bytes_pending_trash: 0,
                             error_message: None,
+                            trashed_path: None,
                         });
                     }
                     Err(err) if err.kind() == std::io::ErrorKind::PermissionDenied => {
@@ -462,6 +484,7 @@ pub fn execute_plan_core(
                             bytes_reclaimed: 0,
                             bytes_pending_trash: 0,
                             error_message: Some(err.to_string()),
+                            trashed_path: None,
                         });
                     }
                     Err(err) => {
@@ -473,6 +496,7 @@ pub fn execute_plan_core(
                             bytes_reclaimed: 0,
                             bytes_pending_trash: 0,
                             error_message: Some(err.to_string()),
+                            trashed_path: None,
                         });
                     }
                 }
@@ -481,6 +505,67 @@ pub fn execute_plan_core(
     }
 
     let _ = plan;
+
+    let completed_at_ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis() as u64;
+
+    let op_id = format!("op-{}", crate::scan::session::generate_session_id());
+    let op_summary = crate::boundary::history::HistoryOperationSummary {
+        id: op_id.clone(),
+        plan_id: args.plan_id.clone(),
+        action_mode: args.action_mode,
+        created_at_ms: started_at_ms,
+        completed_at_ms,
+        succeeded_items,
+        failed_items,
+        skipped_items: skipped_protected,
+        blocked_items: blocked_changed,
+        vanished_items,
+        permission_denied_items,
+        bytes_pending_trash: if args.action_mode == ActionMode::Trash {
+            bytes_pending_trash
+        } else {
+            0
+        },
+        bytes_permanently_reclaimed: if args.action_mode == ActionMode::PermanentDelete {
+            bytes_freed
+        } else {
+            0
+        },
+        total_items: items.len() as u64,
+    };
+
+    let mut persisted_items = Vec::new();
+    for outcome in &item_outcomes {
+        if let Some(matching_item) = items.iter().find(|i| i.item_id == outcome.item_id) {
+            persisted_items.push(crate::boundary::history::PersistedOperationItem {
+                id: format!("op-item-{}", crate::scan::session::generate_session_id()),
+                operation_id: op_id.clone(),
+                item_id: matching_item.item_id.clone(),
+                original_path: matching_item.original_path.clone(),
+                canonical_path: matching_item.canonical_path.clone(),
+                trashed_path: outcome.trashed_path.as_ref().map(std::path::PathBuf::from),
+                device_id: matching_item.device_id,
+                inode: matching_item.inode,
+                size_bytes: matching_item.size_bytes,
+                status: outcome.status,
+                bytes_pending_trash: outcome.bytes_pending_trash,
+                bytes_permanently_reclaimed: outcome.bytes_reclaimed,
+                error_message: outcome.error_message.clone(),
+                created_at_ms: completed_at_ms,
+            });
+        }
+    }
+
+    if let Ok(conn) = database.connection().lock() {
+        let _ = crate::boundary::history::OperationRepository::insert_operation(
+            &conn,
+            &op_summary,
+            &persisted_items,
+        );
+    }
 
     Ok(ExecutionSummary {
         plan_id: args.plan_id,
@@ -502,6 +587,7 @@ pub fn execute_plan_core(
         vanished_items,
         permission_denied_items,
         item_outcomes,
+        operation_id: Some(op_id),
     })
 }
 

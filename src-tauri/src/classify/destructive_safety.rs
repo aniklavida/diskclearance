@@ -1560,6 +1560,7 @@ fn test_prevent_trash_totals_from_being_summed_with_permanently_reclaimed_bytes(
         vanished_items: 0,
         permission_denied_items: 0,
         item_outcomes: vec![],
+        operation_id: None,
     };
     assert_eq!(
         summary.bytes_freed, 0,
@@ -1762,10 +1763,138 @@ fn test_prevent_restore_from_overwriting_occupied_destination() {
 
 /// Damage prevented: Restore engine clobbering existing files during restoration.
 #[test]
-#[ignore = "Execution engine milestone (item 19): restore operation must decline or offer non-colliding rename when destination exists"]
 fn test_prevent_restore_engine_from_clobbering_existing_file_at_destination() {
-    // Commitment test for item 19 execution engine:
-    // Restoring must inspect destination. If occupied, it must decline or offer a safe suffix.
+    use crate::boundary::history::{
+        FetchOperationDetailArgs, HistoryItemDetail, RestoreEligibility, RestoreItemArgs,
+        fetch_operation_detail_core, restore_item_core,
+    };
+    use crate::boundary::plan::{BuildPlanArgs, build_plan_core};
+    use crate::platform::tests::TestAdapter;
+    use crate::scan::session::ScanSessionRepository;
+    use crate::storage::AppDatabase;
+
+    let fixture = DisposableFixtureTree::new("restore-clobber-engine");
+    let initial_file = fixture.create_file("important.txt", b"RESTORED PAYLOAD");
+
+    let mut adapter = TestAdapter::default();
+    let trash_dir = fixture.create_dir("mock_trash");
+    adapter.trash = trash_dir;
+
+    let db = AppDatabase::open_in_memory().unwrap();
+    let conn = db.connection().lock().unwrap();
+    ScanSessionRepository::create_session(&conn, "sess-clobber", "/").unwrap();
+    ScanSessionRepository::insert_finding(
+        &conn,
+        "f-clobber",
+        "sess-clobber",
+        &initial_file.to_string_lossy(),
+        16,
+        "Rebuildable",
+        "Cache",
+    )
+    .unwrap();
+    drop(conn);
+
+    let build_args = BuildPlanArgs {
+        session_id: "sess-clobber".into(),
+        finding_ids: vec!["f-clobber".into()],
+    };
+    let plan = build_plan_core(build_args, &db, &adapter).unwrap();
+
+    let exec_args = ExecutePlanArgs {
+        plan_id: plan.plan_id.clone(),
+        action_mode: ActionMode::Trash,
+    };
+    let summary = execute_plan_core(exec_args, &db, &adapter, None).unwrap();
+    assert_eq!(summary.succeeded_items, 1);
+
+    // Fetch the operation detail to get the operation_item_id
+    let op_id = summary.operation_id.expect("must have operation_id");
+    let detail = fetch_operation_detail_core(
+        FetchOperationDetailArgs {
+            operation_id: op_id,
+            outcome_filter: None,
+        },
+        &db,
+        &adapter,
+    )
+    .unwrap();
+    let op_item_id = match &detail.items[0] {
+        HistoryItemDetail::Trash(t) => t.operation_item_id.clone(),
+        _ => panic!("Expected trash item"),
+    };
+
+    // Re-create the file at the original destination with different content
+    let occupant_content = b"DO NOT CLOBBER THIS IMPORTANT OCCUPANT";
+    fixture.create_file("important.txt", occupant_content);
+    assert_eq!(fixture.read_file("important.txt"), occupant_content);
+
+    // Live restore eligibility check must detect destination is occupied and suggest an alternate destination
+    let detail_occupied = fetch_operation_detail_core(
+        FetchOperationDetailArgs {
+            operation_id: detail.operation.id.clone(),
+            outcome_filter: None,
+        },
+        &db,
+        &adapter,
+    )
+    .unwrap();
+    let suggested_alt = match &detail_occupied.items[0] {
+        HistoryItemDetail::Trash(t) => match &t.restore_eligibility {
+            RestoreEligibility::Eligible {
+                destination_occupied,
+                suggested_alternate_destination,
+                ..
+            } => {
+                assert!(*destination_occupied, "Must detect destination is occupied");
+                suggested_alternate_destination
+                    .clone()
+                    .expect("Must offer safe alternate destination")
+            }
+            other => panic!("Expected Eligible with destination_occupied, got {other:?}"),
+        },
+        _ => panic!("Expected trash item"),
+    };
+
+    // Attempting restore directly to the occupied destination must decline and return an error
+    let restore_err = restore_item_core(
+        RestoreItemArgs {
+            operation_item_id: op_item_id.clone(),
+            alternate_destination: None,
+        },
+        &db,
+        &adapter,
+    );
+    assert!(
+        restore_err.is_err(),
+        "Must refuse to overwrite occupied destination"
+    );
+
+    // Assert occupant was untouched byte for byte
+    assert_eq!(
+        fixture.read_file("important.txt"),
+        occupant_content,
+        "Original occupant must be untouched byte for byte"
+    );
+
+    // Restoring to the safe alternate destination succeeds without clobbering the occupant
+    let restore_res = restore_item_core(
+        RestoreItemArgs {
+            operation_item_id: op_item_id,
+            alternate_destination: Some(suggested_alt.clone()),
+        },
+        &db,
+        &adapter,
+    )
+    .unwrap();
+
+    assert_eq!(restore_res.restored_to_path, suggested_alt);
+    assert_eq!(std::fs::read(&suggested_alt).unwrap(), b"RESTORED PAYLOAD");
+    assert_eq!(
+        fixture.read_file("important.txt"),
+        occupant_content,
+        "Original occupant must still be completely untouched byte for byte after alternate restore"
+    );
 }
 
 // ============================================================================

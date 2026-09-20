@@ -3,6 +3,7 @@ pub mod destructive;
 pub mod error;
 pub mod events;
 pub mod generator;
+pub mod history;
 pub mod plan;
 pub mod read;
 pub mod throttle;
@@ -14,6 +15,14 @@ pub use destructive::{
 };
 pub use error::CommandError;
 pub use events::*;
+pub use history::{
+    FetchHistoryOperationsArgs, FetchOperationDetailArgs, HistoryItemDetail,
+    HistoryOperationDetail, HistoryOperationSummary, LifetimeReclamationTotals,
+    PermanentDeleteHistoryItemDetail, RestoreEligibility, RestoreItemArgs, RestoreItemSummary,
+    TrashHistoryItemDetail, fetch_history_operations, fetch_history_operations_core,
+    fetch_lifetime_reclamation_totals, fetch_lifetime_reclamation_totals_core,
+    fetch_operation_detail, fetch_operation_detail_core, restore_item, restore_item_core,
+};
 pub use plan::{
     BuildPlanArgs, FetchPlanArgs, PlanItemSummary, RevalidatePlanArgs, RevalidationResult,
     ReviewPlan, ReviewPlanHeader, build_plan, fetch_plan, revalidate_plan,

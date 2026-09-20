@@ -19,6 +19,11 @@ export const COMMAND_BUILD_PLAN = "build_plan";
 export const COMMAND_FETCH_PLAN = "fetch_plan";
 export const COMMAND_REVALIDATE_PLAN = "revalidate_plan";
 export const COMMAND_EXECUTE_PLAN = "execute_plan";
+export const COMMAND_FETCH_HISTORY_OPERATIONS = "fetch_history_operations";
+export const COMMAND_FETCH_OPERATION_DETAIL = "fetch_operation_detail";
+export const COMMAND_RESTORE_ITEM = "restore_item";
+export const COMMAND_FETCH_LIFETIME_RECLAMATION_TOTALS =
+  "fetch_lifetime_reclamation_totals";
 
 // Foundation
 export type FoundationStatus = {
@@ -199,6 +204,7 @@ export type ItemOutcomeRecord = {
   bytesReclaimed: bigint;
   bytesPendingTrash: bigint;
   errorMessage: string | null;
+  trashedPath: string | null;
 };
 
 export type ExecutionSummary = {
@@ -213,4 +219,96 @@ export type ExecutionSummary = {
   vanishedItems: bigint;
   permissionDeniedItems: bigint;
   itemOutcomes: Array<ItemOutcomeRecord>;
+  operationId: string | null;
+};
+
+// History and restore capability
+export type FetchHistoryOperationsArgs = {
+  outcomeFilter: string | null;
+  dateFromMs: bigint | null;
+  dateToMs: bigint | null;
+};
+
+export type HistoryOperationSummary = {
+  id: string;
+  planId: string;
+  actionMode: ActionMode;
+  createdAtMs: bigint;
+  completedAtMs: bigint;
+  succeededItems: bigint;
+  failedItems: bigint;
+  skippedItems: bigint;
+  blockedItems: bigint;
+  vanishedItems: bigint;
+  permissionDeniedItems: bigint;
+  bytesPendingTrash: bigint;
+  bytesPermanentlyReclaimed: bigint;
+  totalItems: bigint;
+};
+
+export type FetchOperationDetailArgs = {
+  operationId: string;
+  outcomeFilter: string | null;
+};
+
+export type RestoreEligibility =
+  | {
+      status: "eligible";
+      trashed_path: string;
+      original_destination: string;
+      destination_occupied: boolean;
+      suggested_alternate_destination: string | null;
+    }
+  | { status: "ineligible"; reason: string }
+  | { status: "restored"; restored_to_path: string; restored_at_ms: bigint };
+
+export type TrashHistoryItemDetail = {
+  operationItemId: string;
+  itemId: string;
+  originalPath: string;
+  trashedPath: string | null;
+  sizeBytes: bigint;
+  status: ItemOutcomeStatus;
+  bytesPendingTrash: bigint;
+  errorMessage: string | null;
+  createdAtMs: bigint;
+  restoreEligibility: RestoreEligibility;
+};
+
+export type PermanentDeleteHistoryItemDetail = {
+  operationItemId: string;
+  itemId: string;
+  originalPath: string;
+  sizeBytes: bigint;
+  status: ItemOutcomeStatus;
+  bytesPermanentlyReclaimed: bigint;
+  errorMessage: string | null;
+  createdAtMs: bigint;
+};
+
+export type HistoryItemDetail =
+  | ({ actionType: "trash" } & TrashHistoryItemDetail)
+  | ({ actionType: "permanentDelete" } & PermanentDeleteHistoryItemDetail);
+
+export type HistoryOperationDetail = {
+  operation: HistoryOperationSummary;
+  items: Array<HistoryItemDetail>;
+};
+
+export type RestoreItemArgs = {
+  operationItemId: string;
+  alternateDestination: string | null;
+};
+
+export type RestoreItemSummary = {
+  restoreId: string;
+  operationItemId: string;
+  restoredToPath: string;
+  sizeBytes: bigint;
+  restoredAtMs: bigint;
+};
+
+export type LifetimeReclamationTotals = {
+  pendingInTrashBytes: bigint;
+  permanentlyReclaimedBytes: bigint;
 };
