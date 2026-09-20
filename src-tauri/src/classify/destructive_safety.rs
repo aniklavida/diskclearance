@@ -1762,6 +1762,11 @@ fn test_prevent_restore_from_overwriting_occupied_destination() {
 }
 
 /// Damage prevented: Restore engine clobbering existing files during restoration.
+// Unix-only: restore eligibility is decided by filesystem identity (device id and
+// inode), which has no equivalent available here. The Windows platform adapter
+// already declares `file_identity` and `restore_from_trash` unsupported, so there
+// is no restore engine on that platform for this test to protect.
+#[cfg(unix)]
 #[test]
 fn test_prevent_restore_engine_from_clobbering_existing_file_at_destination() {
     use crate::boundary::history::{
