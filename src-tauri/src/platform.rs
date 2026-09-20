@@ -449,15 +449,92 @@ impl PlatformAdapter for MacOsAdapter {
         }
     }
 
-    fn move_to_trash(&self, _path: &Path) -> Result<TrashedItem, PlatformError> {
-        Err(PlatformError::Unsupported(
-            "move_to_trash is scheduled for M2 and unsupported in M0/M1",
-        ))
+    fn move_to_trash(&self, path: &Path) -> Result<TrashedItem, PlatformError> {
+        if !path.exists() && !path.is_symlink() {
+            return Err(PlatformError::NotFound(path.to_path_buf()));
+        }
+
+        let path_str = path.to_str().ok_or_else(|| {
+            PlatformError::ResolutionError("Path contains non-UTF-8 characters".into())
+        })?;
+
+        // Invoke native macOS Cocoa NSFileManager.trashItemAtURL via osascript JXA.
+        // This ensures the item lands in the native macOS Trash with Put Back metadata,
+        // without prompting for Apple Events TCC permissions.
+        // The path argument is passed via argv array, eliminating command injection risks.
+        let script = r#"ObjC.import("Foundation");
+function run(argv) {
+    var path = argv[0];
+    var url = $.NSURL.fileURLWithPath(path);
+    var resultingURL = $();
+    var err = $();
+    var ok = $.NSFileManager.defaultManager.trashItemAtURLResultingItemURLError(url, resultingURL, err);
+    if (!ok) {
+        var desc = (err && err.localizedDescription) ? err.localizedDescription.js : "Failed to move to trash";
+        return JSON.stringify({ success: false, error: desc });
+    }
+    var resPath = (resultingURL && resultingURL.path) ? resultingURL.path.js : "";
+    return JSON.stringify({ success: true, resultingPath: resPath });
+}"#;
+
+        let output = std::process::Command::new("/usr/bin/osascript")
+            .args(["-l", "JavaScript", "-e", script])
+            .arg(path_str)
+            .output()
+            .map_err(|e| PlatformError::Io(format!("Failed to spawn osascript: {e}")))?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(PlatformError::Io(format!("osascript failed: {stderr}")));
+        }
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        #[derive(serde::Deserialize)]
+        struct JxaTrashOutput {
+            success: bool,
+            #[serde(rename = "resultingPath")]
+            resulting_path: Option<String>,
+            error: Option<String>,
+        }
+
+        let parsed: JxaTrashOutput = serde_json::from_str(stdout.trim()).map_err(|e| {
+            PlatformError::Io(format!("Failed to parse trash output: {e} ({stdout})"))
+        })?;
+
+        if !parsed.success {
+            let msg = parsed
+                .error
+                .unwrap_or_else(|| "Unknown trash failure".into());
+            if msg.to_lowercase().contains("permission") {
+                return Err(PlatformError::PermissionDenied {
+                    scope: path.to_path_buf(),
+                    reason: msg,
+                    settings_target: None,
+                });
+            }
+            return Err(PlatformError::TrashError(msg));
+        }
+
+        let trashed_path = parsed
+            .resulting_path
+            .filter(|p| !p.is_empty())
+            .map(PathBuf::from)
+            .unwrap_or_else(|| path.to_path_buf());
+
+        Ok(TrashedItem {
+            trashed_path,
+            original_path: path.to_path_buf(),
+            display_name: path
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string(),
+        })
     }
 
     fn enumerate_trash(&self) -> Result<Vec<TrashedItem>, PlatformError> {
         Err(PlatformError::Unsupported(
-            "enumerate_trash is scheduled for M2 and unsupported in M0/M1",
+            "enumerate_trash is not yet implemented (planned for a future history/restore milestone)",
         ))
     }
 
@@ -466,7 +543,7 @@ impl PlatformAdapter for MacOsAdapter {
         _item: &TrashedItem,
     ) -> Result<TrashedItemStatus, PlatformError> {
         Err(PlatformError::Unsupported(
-            "check_trashed_item_exists is scheduled for M2 and unsupported in M0/M1",
+            "check_trashed_item_exists is not yet implemented (planned for a future history/restore milestone)",
         ))
     }
 

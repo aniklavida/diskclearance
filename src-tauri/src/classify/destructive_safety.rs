@@ -8,7 +8,11 @@
 use std::path::{Path, PathBuf};
 
 use crate::boundary::cancellation::CancellationRegistry;
-use crate::boundary::destructive::{ActionMode, ExecutePlanArgs, ExecutionSummary};
+use crate::boundary::destructive::{
+    ActionMode, ExecutePlanArgs, ExecutionSummary, ItemOutcomeStatus, execute_plan_core,
+};
+use crate::boundary::error::CommandError;
+use crate::boundary::plan::{PlanItemDetail, PlanItemSummary, PlanRepository, ReviewPlan};
 use crate::classify::catalogue::{ClassifiedFinding, RuleCatalogue};
 use crate::classify::class::{PlannableClass, SafetyClass};
 use crate::classify::evidence::{Confidence, Evidence, Recoverability};
@@ -148,8 +152,10 @@ fn test_prevent_path_injection_into_execute_plan_api_request() {
         "Safety failure: ExecutePlanArgs JSON structure must never contain a path parameter"
     );
 
-    // Calling the API returns Unsupported because plan execution is not implemented in this milestone
-    let res = crate::boundary::destructive::execute_plan(args);
+    // Calling the core API returns error because unvetted plans do not exist
+    let db = crate::storage::AppDatabase::open_in_memory().unwrap();
+    let adapter = ClassificationTestAdapter::new("prevent-injection");
+    let res = execute_plan_core(args, &db, &adapter, None);
     assert!(
         res.is_err(),
         "Safety failure: execute_plan must not execute unvetted requests"
@@ -158,11 +164,110 @@ fn test_prevent_path_injection_into_execute_plan_api_request() {
 
 /// Damage prevented: Execution engine executing any plan containing protected roots.
 #[test]
-#[ignore = "Execution engine milestone (item 19): execute_plan must revalidate each item and reject protected roots"]
 fn test_prevent_execution_engine_from_executing_plan_with_protected_roots() {
-    // Commitment test for item 19 execution engine:
-    // When execute_plan is called with a plan containing a protected path, execution
-    // must halt and return an error before any deletion occurs.
+    let adapter = ClassificationTestAdapter::new("exec-protected-roots");
+    let db = crate::storage::AppDatabase::open_in_memory().unwrap();
+    let conn = db.connection().lock().unwrap();
+
+    crate::scan::session::ScanSessionRepository::create_session(&conn, "sess-prot", "/").unwrap();
+
+    // 1. Create a benign file that should NEVER be deleted
+    let benign_file = adapter
+        .fixture
+        .create_file("cache/benign.tmp", b"BENIGN-CONTENT");
+    let benign_meta = adapter.read_entry_metadata(&benign_file).unwrap();
+    let benign_resolved = adapter.canonicalize_and_normalize(&benign_file).unwrap();
+
+    // 2. Create a protected SSH key inside user home
+    let ssh_dir = adapter.home.join(".ssh");
+    std::fs::create_dir_all(&ssh_dir).unwrap();
+    let key_file = ssh_dir.join("id_ed25519");
+    std::fs::write(&key_file, b"SSH-PRIVATE-KEY-SECRET").unwrap();
+    let key_meta = adapter.read_entry_metadata(&key_file).unwrap();
+    let key_resolved = adapter.canonicalize_and_normalize(&key_file).unwrap();
+
+    // 3. Inject both into a plan (simulating a corrupted or malicious plan)
+    let plan = ReviewPlan {
+        plan_id: "plan-with-protected".to_string(),
+        session_id: "sess-prot".to_string(),
+        items: vec![
+            PlanItemSummary {
+                item_id: "item-benign".to_string(),
+                original_path: benign_file.to_string_lossy().to_string(),
+                size_bytes: 14,
+                class_name: "Rebuildable".to_string(),
+                action_name: "Trash".to_string(),
+                recoverable: true,
+            },
+            PlanItemSummary {
+                item_id: "item-protected".to_string(),
+                original_path: key_file.to_string_lossy().to_string(),
+                size_bytes: 22,
+                class_name: "Protected".to_string(),
+                action_name: "Trash".to_string(),
+                recoverable: true,
+            },
+        ],
+        default_action_mode: ActionMode::Trash,
+        created_at_ms: 1000,
+    };
+
+    let details = vec![
+        PlanItemDetail {
+            item_id: "item-benign".to_string(),
+            plan_id: "plan-with-protected".to_string(),
+            original_path: benign_file.clone(),
+            canonical_path: benign_resolved.canonical,
+            device_id: benign_meta.identity.device_id,
+            inode: benign_meta.identity.inode,
+            size_bytes: 14,
+            class_name: "Rebuildable".to_string(),
+            rule_id: "rule.cache".to_string(),
+            rule_version: 1,
+            action_name: "Trash".to_string(),
+            recoverable: true,
+        },
+        PlanItemDetail {
+            item_id: "item-protected".to_string(),
+            plan_id: "plan-with-protected".to_string(),
+            original_path: key_file.clone(),
+            canonical_path: key_resolved.canonical,
+            device_id: key_meta.identity.device_id,
+            inode: key_meta.identity.inode,
+            size_bytes: 22,
+            class_name: "Protected".to_string(),
+            rule_id: "protected.crypto.ssh".to_string(),
+            rule_version: 1,
+            action_name: "Trash".to_string(),
+            recoverable: true,
+        },
+    ];
+
+    PlanRepository::insert_plan_with_items(&conn, &plan, &details).unwrap();
+    drop(conn);
+
+    let args = ExecutePlanArgs {
+        plan_id: "plan-with-protected".to_string(),
+        action_mode: ActionMode::Trash,
+    };
+
+    // Execute plan: must halt and return error before ANY deletion occurs
+    let res = execute_plan_core(args, &db, &adapter, None);
+    assert!(
+        matches!(res, Err(CommandError::PermissionDenied { .. })),
+        "Safety failure: execute_plan must reject plan with protected roots! Got: {res:?}"
+    );
+
+    // Assert: benign file was NEVER deleted (execution halted before any modification)
+    assert!(
+        benign_file.exists(),
+        "Safety failure: benign file was deleted even though plan execution was aborted!"
+    );
+    assert_eq!(std::fs::read(&benign_file).unwrap(), b"BENIGN-CONTENT");
+
+    // Assert: protected SSH key is untouched
+    assert!(key_file.exists());
+    assert_eq!(std::fs::read(&key_file).unwrap(), b"SSH-PRIVATE-KEY-SECRET");
 }
 
 // ============================================================================
@@ -283,10 +388,89 @@ fn test_prevent_symlink_pointing_to_protected_root_from_revalidation() {
 
 /// Damage prevented: Execution engine following symlinks during recursive cleanup.
 #[test]
-#[ignore = "Execution engine milestone (item 19): execute_plan must remove only symlink entries without traversing into targets"]
 fn test_prevent_execution_engine_from_traversing_symlink_targets_during_cleanup() {
-    // Commitment test for item 19 execution engine:
-    // execute_plan must remove only the symlink node and never follow directory symlinks.
+    let adapter = ClassificationTestAdapter::new("exec-symlink-traverse");
+    let outside_fixture = DisposableFixtureTree::new("exec-symlink-outside");
+    let db = crate::storage::AppDatabase::open_in_memory().unwrap();
+    let conn = db.connection().lock().unwrap();
+
+    crate::scan::session::ScanSessionRepository::create_session(&conn, "sess-sym", "/").unwrap();
+
+    // 1. Outside directory with target file
+    let outside_file = outside_fixture.create_file("source_code.rs", b"fn keep_this() {}");
+
+    // 2. Directory scheduled for cleanup
+    let cache_dir = adapter.fixture.create_dir("cache/build");
+    let link_to_outside = adapter
+        .fixture
+        .create_symlink(&outside_file, "cache/build/link_to_source");
+    let file_inside = adapter
+        .fixture
+        .create_file("cache/build/artifact.o", b"BUILD-OBJ");
+
+    assert!(link_to_outside.is_symlink());
+
+    let cache_meta = adapter.read_entry_metadata(&cache_dir).unwrap();
+    let cache_resolved = adapter.canonicalize_and_normalize(&cache_dir).unwrap();
+
+    // 3. ReviewPlan targeting cache_dir for PermanentDelete
+    let plan = ReviewPlan {
+        plan_id: "plan-symlink-test".to_string(),
+        session_id: "sess-sym".to_string(),
+        items: vec![PlanItemSummary {
+            item_id: "item-cache-dir".to_string(),
+            original_path: cache_dir.to_string_lossy().to_string(),
+            size_bytes: 100,
+            class_name: "Rebuildable".to_string(),
+            action_name: "PermanentDelete".to_string(),
+            recoverable: false,
+        }],
+        default_action_mode: ActionMode::PermanentDelete,
+        created_at_ms: 1000,
+    };
+
+    let details = vec![PlanItemDetail {
+        item_id: "item-cache-dir".to_string(),
+        plan_id: "plan-symlink-test".to_string(),
+        original_path: cache_dir.clone(),
+        canonical_path: cache_resolved.canonical,
+        device_id: cache_meta.identity.device_id,
+        inode: cache_meta.identity.inode,
+        size_bytes: 100,
+        class_name: "Rebuildable".to_string(),
+        rule_id: "rule.cache".to_string(),
+        rule_version: 1,
+        action_name: "PermanentDelete".to_string(),
+        recoverable: false,
+    }];
+
+    PlanRepository::insert_plan_with_items(&conn, &plan, &details).unwrap();
+    drop(conn);
+
+    let args = ExecutePlanArgs {
+        plan_id: "plan-symlink-test".to_string(),
+        action_mode: ActionMode::PermanentDelete,
+    };
+
+    let summary = execute_plan_core(args, &db, &adapter, None).unwrap();
+    assert_eq!(summary.succeeded_items, 1);
+    assert_eq!(summary.failed_items, 0);
+
+    // Assert: cache_dir and its contents were removed
+    assert!(!cache_dir.exists());
+    assert!(!file_inside.exists());
+    assert!(!link_to_outside.exists());
+
+    // CRITICAL: outside file must still exist and be completely unaltered!
+    assert!(
+        outside_file.exists(),
+        "Safety failure: Symlink traversal destroyed the target outside fixture!"
+    );
+    assert_eq!(
+        std::fs::read(&outside_file).unwrap(),
+        b"fn keep_this() {}",
+        "Safety failure: Target file content was corrupted by symlink deletion!"
+    );
 }
 
 // ============================================================================
@@ -375,11 +559,118 @@ fn test_prevent_deletion_of_directory_swapped_with_symlink_between_review_and_ex
 }
 
 /// Damage prevented: Execution engine deleting a target whose identity changed after review.
+#[cfg(unix)]
 #[test]
-#[ignore = "Execution engine milestone (item 19): execute_plan must revalidate immediately before deletion and abort on identity change"]
 fn test_prevent_execution_engine_from_deleting_swapped_target() {
-    // Commitment test for item 19 execution engine:
-    // execute_plan must abort deletion if the target at path has changed identity.
+    let adapter = ClassificationTestAdapter::new("exec-swapped-target");
+    let db = crate::storage::AppDatabase::open_in_memory().unwrap();
+    let conn = db.connection().lock().unwrap();
+
+    crate::scan::session::ScanSessionRepository::create_session(&conn, "sess-swap", "/").unwrap();
+
+    // 1. Initial file A that will be swapped
+    let file_a = adapter
+        .fixture
+        .create_file("cache/build.o", b"INITIAL BUILD OBJ");
+    let meta_a = adapter.read_entry_metadata(&file_a).unwrap();
+    let res_a = adapter.canonicalize_and_normalize(&file_a).unwrap();
+
+    // 2. Sibling file B that will not be swapped
+    let file_b = adapter.fixture.create_file("cache/normal.o", b"NORMAL OBJ");
+    let meta_b = adapter.read_entry_metadata(&file_b).unwrap();
+    let res_b = adapter.canonicalize_and_normalize(&file_b).unwrap();
+
+    let plan = ReviewPlan {
+        plan_id: "plan-swap".to_string(),
+        session_id: "sess-swap".to_string(),
+        items: vec![
+            PlanItemSummary {
+                item_id: "item-swapped".to_string(),
+                original_path: file_a.to_string_lossy().to_string(),
+                size_bytes: 17,
+                class_name: "Rebuildable".to_string(),
+                action_name: "PermanentDelete".to_string(),
+                recoverable: false,
+            },
+            PlanItemSummary {
+                item_id: "item-normal".to_string(),
+                original_path: file_b.to_string_lossy().to_string(),
+                size_bytes: 10,
+                class_name: "Rebuildable".to_string(),
+                action_name: "PermanentDelete".to_string(),
+                recoverable: false,
+            },
+        ],
+        default_action_mode: ActionMode::PermanentDelete,
+        created_at_ms: 1000,
+    };
+
+    let details = vec![
+        PlanItemDetail {
+            item_id: "item-swapped".to_string(),
+            plan_id: "plan-swap".to_string(),
+            original_path: file_a.clone(),
+            canonical_path: res_a.canonical,
+            device_id: meta_a.identity.device_id,
+            inode: meta_a.identity.inode,
+            size_bytes: 17,
+            class_name: "Rebuildable".to_string(),
+            rule_id: "rule.cache".to_string(),
+            rule_version: 1,
+            action_name: "PermanentDelete".to_string(),
+            recoverable: false,
+        },
+        PlanItemDetail {
+            item_id: "item-normal".to_string(),
+            plan_id: "plan-swap".to_string(),
+            original_path: file_b.clone(),
+            canonical_path: res_b.canonical,
+            device_id: meta_b.identity.device_id,
+            inode: meta_b.identity.inode,
+            size_bytes: 10,
+            class_name: "Rebuildable".to_string(),
+            rule_id: "rule.cache".to_string(),
+            rule_version: 1,
+            action_name: "PermanentDelete".to_string(),
+            recoverable: false,
+        },
+    ];
+
+    PlanRepository::insert_plan_with_items(&conn, &plan, &details).unwrap();
+    drop(conn);
+
+    // Swap file A with a new file (allocating a new inode)
+    adapter
+        .fixture
+        .replace_with_new_inode("cache/build.o", b"MALICIOUSLY SWAPPED DATA");
+
+    let new_meta_a = adapter.read_entry_metadata(&file_a).unwrap();
+    assert_ne!(
+        meta_a.identity.inode, new_meta_a.identity.inode,
+        "Precondition: inodes must differ after swap"
+    );
+
+    let args = ExecutePlanArgs {
+        plan_id: "plan-swap".to_string(),
+        action_mode: ActionMode::PermanentDelete,
+    };
+
+    let summary = execute_plan_core(args, &db, &adapter, None).unwrap();
+
+    // Assert: swapped item was blocked and recorded as BlockedChanged
+    assert_eq!(summary.blocked_changed, 1);
+    assert_eq!(summary.succeeded_items, 1);
+    assert_eq!(summary.failed_items, 0);
+
+    // Assert: swapped file was NOT deleted!
+    assert!(
+        file_a.exists(),
+        "Safety failure: Swapped file was deleted despite inode identity mismatch!"
+    );
+    assert_eq!(std::fs::read(&file_a).unwrap(), b"MALICIOUSLY SWAPPED DATA");
+
+    // Assert: normal item was deleted cleanly
+    assert!(!file_b.exists());
 }
 
 // ============================================================================
@@ -446,11 +737,78 @@ fn test_prevent_deletion_when_target_recreated_with_same_name_size_mtime_but_new
 }
 
 /// Damage prevented: Execution engine proceeding when inode has changed.
+#[cfg(unix)]
 #[test]
-#[ignore = "Execution engine milestone (item 19): execute_plan must verify inode and reject deletion on mismatch even if size and mtime match"]
 fn test_prevent_execution_engine_from_deleting_recreated_inode_target() {
-    // Commitment test for item 19 execution engine:
-    // Inode check must be mandatory in the execution revalidation loop.
+    let adapter = ClassificationTestAdapter::new("exec-recreated-inode");
+    let db = crate::storage::AppDatabase::open_in_memory().unwrap();
+    let conn = db.connection().lock().unwrap();
+
+    crate::scan::session::ScanSessionRepository::create_session(&conn, "sess-recreated", "/")
+        .unwrap();
+
+    let payload = b"IDENTICAL SIZE AND PAYLOAD CONTENT";
+    let file = adapter.fixture.create_file("cache/recreated.tmp", payload);
+    let original_meta = adapter.read_entry_metadata(&file).unwrap();
+    let resolved = adapter.canonicalize_and_normalize(&file).unwrap();
+
+    let plan = ReviewPlan {
+        plan_id: "plan-recreated-inode".to_string(),
+        session_id: "sess-recreated".to_string(),
+        items: vec![PlanItemSummary {
+            item_id: "item-recreated".to_string(),
+            original_path: file.to_string_lossy().to_string(),
+            size_bytes: payload.len() as u64,
+            class_name: "Rebuildable".to_string(),
+            action_name: "PermanentDelete".to_string(),
+            recoverable: false,
+        }],
+        default_action_mode: ActionMode::PermanentDelete,
+        created_at_ms: 1000,
+    };
+
+    let details = vec![PlanItemDetail {
+        item_id: "item-recreated".to_string(),
+        plan_id: "plan-recreated-inode".to_string(),
+        original_path: file.clone(),
+        canonical_path: resolved.canonical,
+        device_id: original_meta.identity.device_id,
+        inode: original_meta.identity.inode,
+        size_bytes: payload.len() as u64,
+        class_name: "Rebuildable".to_string(),
+        rule_id: "rule.cache".to_string(),
+        rule_version: 1,
+        action_name: "PermanentDelete".to_string(),
+        recoverable: false,
+    }];
+
+    PlanRepository::insert_plan_with_items(&conn, &plan, &details).unwrap();
+    drop(conn);
+
+    // Recreate with identical payload, forcing new inode allocation
+    adapter
+        .fixture
+        .replace_with_new_inode("cache/recreated.tmp", payload);
+
+    let new_meta = adapter.read_entry_metadata(&file).unwrap();
+    assert_eq!(original_meta.apparent_size, new_meta.apparent_size);
+    assert_ne!(original_meta.identity.inode, new_meta.identity.inode);
+
+    let args = ExecutePlanArgs {
+        plan_id: "plan-recreated-inode".to_string(),
+        action_mode: ActionMode::PermanentDelete,
+    };
+
+    let summary = execute_plan_core(args, &db, &adapter, None).unwrap();
+    assert_eq!(summary.blocked_changed, 1);
+    assert_eq!(summary.succeeded_items, 0);
+
+    // Assert: file was NOT deleted despite matching size and content
+    assert!(
+        file.exists(),
+        "Safety failure: Inode check must be mandatory; deletion should have been blocked"
+    );
+    assert_eq!(std::fs::read(&file).unwrap(), payload);
 }
 
 // ============================================================================
@@ -560,11 +918,131 @@ fn test_prevent_cancellation_signal_from_being_ignored_by_cancellation_registry(
 
 /// Damage prevented: Items remaining in half-deleted state or double-counted upon mid-execution cancellation.
 #[test]
-#[ignore = "Execution engine milestone (item 19): execute_plan cancellation must stop between items, record completed as completed, unattempted as unattempted"]
 fn test_prevent_mid_execution_cancellation_from_leaving_half_deleted_or_double_counted_items() {
-    // Commitment test for item 19 execution engine:
-    // execute_plan must inspect cancellation token before each item, record completed
-    // items in history, leave remaining items untouched on disk, and never double-count.
+    let adapter = ClassificationTestAdapter::new("exec-cancellation");
+    let db = crate::storage::AppDatabase::open_in_memory().unwrap();
+    let conn = db.connection().lock().unwrap();
+
+    crate::scan::session::ScanSessionRepository::create_session(&conn, "sess-cancel", "/").unwrap();
+
+    let file1 = adapter.fixture.create_file("cache/file1.tmp", b"ITEM 1");
+    let meta1 = adapter.read_entry_metadata(&file1).unwrap();
+    let res1 = adapter.canonicalize_and_normalize(&file1).unwrap();
+
+    let file2 = adapter.fixture.create_file("cache/file2.tmp", b"ITEM 2");
+    let meta2 = adapter.read_entry_metadata(&file2).unwrap();
+    let res2 = adapter.canonicalize_and_normalize(&file2).unwrap();
+
+    let file3 = adapter.fixture.create_file("cache/file3.tmp", b"ITEM 3");
+    let meta3 = adapter.read_entry_metadata(&file3).unwrap();
+    let res3 = adapter.canonicalize_and_normalize(&file3).unwrap();
+
+    let plan = ReviewPlan {
+        plan_id: "plan-cancel".to_string(),
+        session_id: "sess-cancel".to_string(),
+        items: vec![
+            PlanItemSummary {
+                item_id: "item-1".to_string(),
+                original_path: file1.to_string_lossy().to_string(),
+                size_bytes: 6,
+                class_name: "Rebuildable".to_string(),
+                action_name: "PermanentDelete".to_string(),
+                recoverable: false,
+            },
+            PlanItemSummary {
+                item_id: "item-2".to_string(),
+                original_path: file2.to_string_lossy().to_string(),
+                size_bytes: 6,
+                class_name: "Rebuildable".to_string(),
+                action_name: "PermanentDelete".to_string(),
+                recoverable: false,
+            },
+            PlanItemSummary {
+                item_id: "item-3".to_string(),
+                original_path: file3.to_string_lossy().to_string(),
+                size_bytes: 6,
+                class_name: "Rebuildable".to_string(),
+                action_name: "PermanentDelete".to_string(),
+                recoverable: false,
+            },
+        ],
+        default_action_mode: ActionMode::PermanentDelete,
+        created_at_ms: 1000,
+    };
+
+    let details = vec![
+        PlanItemDetail {
+            item_id: "item-1".to_string(),
+            plan_id: "plan-cancel".to_string(),
+            original_path: file1.clone(),
+            canonical_path: res1.canonical,
+            device_id: meta1.identity.device_id,
+            inode: meta1.identity.inode,
+            size_bytes: 6,
+            class_name: "Rebuildable".to_string(),
+            rule_id: "rule.cache".to_string(),
+            rule_version: 1,
+            action_name: "PermanentDelete".to_string(),
+            recoverable: false,
+        },
+        PlanItemDetail {
+            item_id: "item-2".to_string(),
+            plan_id: "plan-cancel".to_string(),
+            original_path: file2.clone(),
+            canonical_path: res2.canonical,
+            device_id: meta2.identity.device_id,
+            inode: meta2.identity.inode,
+            size_bytes: 6,
+            class_name: "Rebuildable".to_string(),
+            rule_id: "rule.cache".to_string(),
+            rule_version: 1,
+            action_name: "PermanentDelete".to_string(),
+            recoverable: false,
+        },
+        PlanItemDetail {
+            item_id: "item-3".to_string(),
+            plan_id: "plan-cancel".to_string(),
+            original_path: file3.clone(),
+            canonical_path: res3.canonical,
+            device_id: meta3.identity.device_id,
+            inode: meta3.identity.inode,
+            size_bytes: 6,
+            class_name: "Rebuildable".to_string(),
+            rule_id: "rule.cache".to_string(),
+            rule_version: 1,
+            action_name: "PermanentDelete".to_string(),
+            recoverable: false,
+        },
+    ];
+
+    PlanRepository::insert_plan_with_items(&conn, &plan, &details).unwrap();
+    drop(conn);
+
+    let registry = CancellationRegistry::new();
+    let token = registry.register("plan-cancel");
+
+    // Signal cancellation before execution
+    token.cancel();
+
+    let args = ExecutePlanArgs {
+        plan_id: "plan-cancel".to_string(),
+        action_mode: ActionMode::PermanentDelete,
+    };
+
+    let summary = execute_plan_core(args, &db, &adapter, Some(&registry)).unwrap();
+
+    // All items should be recorded as unattempted; completed items = 0, no double counting
+    assert_eq!(summary.succeeded_items, 0);
+    assert_eq!(summary.failed_items, 0);
+    assert_eq!(summary.item_outcomes.len(), 3);
+    for outcome in &summary.item_outcomes {
+        assert_eq!(outcome.status, ItemOutcomeStatus::Unattempted);
+    }
+
+    // All files remain untouched on disk
+    assert!(file1.exists());
+    assert!(file2.exists());
+    assert!(file3.exists());
 }
 
 // ============================================================================
@@ -666,12 +1144,175 @@ fn test_prevent_partial_failures_from_being_conflated_or_reported_as_blanket_suc
 }
 
 /// Damage prevented: Execution engine reporting a batch with partial failures as complete success.
+#[cfg(unix)]
 #[test]
-#[ignore = "Execution engine milestone (item 19): execute_plan must return individual row outcomes for succeed, permission-denied, vanished, and protected, never claiming blanket success"]
 fn test_prevent_execution_engine_from_reporting_partial_failure_as_overall_success() {
-    // Commitment test for item 19 execution engine:
-    // execute_plan summary must categorize outcomes into distinct buckets:
-    // succeeded, permission_denied, vanished, protected_blocked, and failed.
+    let adapter = ClassificationTestAdapter::new("exec-partial-failure");
+    let db = crate::storage::AppDatabase::open_in_memory().unwrap();
+    let conn = db.connection().lock().unwrap();
+
+    crate::scan::session::ScanSessionRepository::create_session(&conn, "sess-partial", "/")
+        .unwrap();
+
+    // 1. Succeeded item
+    let valid_file = adapter.fixture.create_file("cache/succeed.tmp", b"VALID");
+    let valid_meta = adapter.read_entry_metadata(&valid_file).unwrap();
+    let valid_res = adapter.canonicalize_and_normalize(&valid_file).unwrap();
+
+    // 2. Vanished item
+    let vanished_file = adapter.fixture.create_file("cache/vanish.tmp", b"VANISH");
+    let vanished_meta = adapter.read_entry_metadata(&vanished_file).unwrap();
+    let vanished_res = adapter.canonicalize_and_normalize(&vanished_file).unwrap();
+
+    // 3. Blocked (swapped inode) item
+    let swapped_file = adapter.fixture.create_file("cache/swap.tmp", b"SWAP");
+    let swapped_meta = adapter.read_entry_metadata(&swapped_file).unwrap();
+    let swapped_res = adapter.canonicalize_and_normalize(&swapped_file).unwrap();
+
+    // 4. Permission-denied item: make parent dir unreadable/unexecutable
+    let denied_dir = adapter.fixture.create_dir("cache/denied_dir");
+    let denied_file = adapter
+        .fixture
+        .create_file("cache/denied_dir/file.tmp", b"DENIED");
+    let denied_meta = adapter.read_entry_metadata(&denied_file).unwrap();
+    let denied_res = adapter.canonicalize_and_normalize(&denied_file).unwrap();
+
+    let plan = ReviewPlan {
+        plan_id: "plan-partial".to_string(),
+        session_id: "sess-partial".to_string(),
+        items: vec![
+            PlanItemSummary {
+                item_id: "item-valid".to_string(),
+                original_path: valid_file.to_string_lossy().to_string(),
+                size_bytes: 5,
+                class_name: "Rebuildable".to_string(),
+                action_name: "PermanentDelete".to_string(),
+                recoverable: false,
+            },
+            PlanItemSummary {
+                item_id: "item-vanished".to_string(),
+                original_path: vanished_file.to_string_lossy().to_string(),
+                size_bytes: 6,
+                class_name: "Rebuildable".to_string(),
+                action_name: "PermanentDelete".to_string(),
+                recoverable: false,
+            },
+            PlanItemSummary {
+                item_id: "item-swapped".to_string(),
+                original_path: swapped_file.to_string_lossy().to_string(),
+                size_bytes: 4,
+                class_name: "Rebuildable".to_string(),
+                action_name: "PermanentDelete".to_string(),
+                recoverable: false,
+            },
+            PlanItemSummary {
+                item_id: "item-denied".to_string(),
+                original_path: denied_file.to_string_lossy().to_string(),
+                size_bytes: 6,
+                class_name: "Rebuildable".to_string(),
+                action_name: "PermanentDelete".to_string(),
+                recoverable: false,
+            },
+        ],
+        default_action_mode: ActionMode::PermanentDelete,
+        created_at_ms: 1000,
+    };
+
+    let details = vec![
+        PlanItemDetail {
+            item_id: "item-valid".to_string(),
+            plan_id: "plan-partial".to_string(),
+            original_path: valid_file.clone(),
+            canonical_path: valid_res.canonical,
+            device_id: valid_meta.identity.device_id,
+            inode: valid_meta.identity.inode,
+            size_bytes: 5,
+            class_name: "Rebuildable".to_string(),
+            rule_id: "rule.cache".to_string(),
+            rule_version: 1,
+            action_name: "PermanentDelete".to_string(),
+            recoverable: false,
+        },
+        PlanItemDetail {
+            item_id: "item-vanished".to_string(),
+            plan_id: "plan-partial".to_string(),
+            original_path: vanished_file.clone(),
+            canonical_path: vanished_res.canonical,
+            device_id: vanished_meta.identity.device_id,
+            inode: vanished_meta.identity.inode,
+            size_bytes: 6,
+            class_name: "Rebuildable".to_string(),
+            rule_id: "rule.cache".to_string(),
+            rule_version: 1,
+            action_name: "PermanentDelete".to_string(),
+            recoverable: false,
+        },
+        PlanItemDetail {
+            item_id: "item-swapped".to_string(),
+            plan_id: "plan-partial".to_string(),
+            original_path: swapped_file.clone(),
+            canonical_path: swapped_res.canonical,
+            device_id: swapped_meta.identity.device_id,
+            inode: swapped_meta.identity.inode,
+            size_bytes: 4,
+            class_name: "Rebuildable".to_string(),
+            rule_id: "rule.cache".to_string(),
+            rule_version: 1,
+            action_name: "PermanentDelete".to_string(),
+            recoverable: false,
+        },
+        PlanItemDetail {
+            item_id: "item-denied".to_string(),
+            plan_id: "plan-partial".to_string(),
+            original_path: denied_file.clone(),
+            canonical_path: denied_res.canonical,
+            device_id: denied_meta.identity.device_id,
+            inode: denied_meta.identity.inode,
+            size_bytes: 6,
+            class_name: "Rebuildable".to_string(),
+            rule_id: "rule.cache".to_string(),
+            rule_version: 1,
+            action_name: "PermanentDelete".to_string(),
+            recoverable: false,
+        },
+    ];
+
+    PlanRepository::insert_plan_with_items(&conn, &plan, &details).unwrap();
+    drop(conn);
+
+    // Cause mutations before execution:
+    // 1. Vanish item 2
+    std::fs::remove_file(&vanished_file).unwrap();
+    // 2. Swap inode of item 3
+    adapter
+        .fixture
+        .replace_with_new_inode("cache/swap.tmp", b"SWAPPED");
+    // 3. Chmod 000 denied directory so entry metadata or deletion fails with permission denied
+    use std::os::unix::fs::PermissionsExt;
+    std::fs::set_permissions(&denied_dir, std::fs::Permissions::from_mode(0o000)).unwrap();
+
+    let args = ExecutePlanArgs {
+        plan_id: "plan-partial".to_string(),
+        action_mode: ActionMode::PermanentDelete,
+    };
+
+    let summary = execute_plan_core(args, &db, &adapter, None).unwrap();
+
+    // Restore permissions for fixture cleanup
+    let _ = std::fs::set_permissions(&denied_dir, std::fs::Permissions::from_mode(0o755));
+
+    assert_eq!(summary.succeeded_items, 1);
+    assert_eq!(summary.vanished_items, 1);
+    assert_eq!(summary.blocked_changed, 1);
+    assert_eq!(summary.permission_denied_items, 1);
+    assert_eq!(summary.failed_items, 1);
+    assert_eq!(summary.item_outcomes.len(), 4);
+
+    let statuses: Vec<ItemOutcomeStatus> = summary.item_outcomes.iter().map(|o| o.status).collect();
+    assert!(statuses.contains(&ItemOutcomeStatus::Succeeded));
+    assert!(statuses.contains(&ItemOutcomeStatus::Vanished));
+    assert!(statuses.contains(&ItemOutcomeStatus::BlockedChanged));
+    assert!(statuses.contains(&ItemOutcomeStatus::PermissionDenied));
 }
 
 // ============================================================================
@@ -719,10 +1360,153 @@ fn test_prevent_vanished_target_before_execution_from_crashing_or_aborting_reval
 
 /// Damage prevented: Execution engine aborting an entire batch when an individual item vanishes.
 #[test]
-#[ignore = "Execution engine milestone (item 19): execute_plan must record vanished target in outcome row and continue remaining batch items"]
 fn test_prevent_execution_engine_from_aborting_batch_when_single_target_vanishes() {
-    // Commitment test for item 19 execution engine:
-    // Vanished targets must be recorded as Vanished in history and remaining items processed.
+    let adapter = ClassificationTestAdapter::new("exec-vanished-batch");
+    let db = crate::storage::AppDatabase::open_in_memory().unwrap();
+    let conn = db.connection().lock().unwrap();
+
+    crate::scan::session::ScanSessionRepository::create_session(&conn, "sess-vanish-batch", "/")
+        .unwrap();
+
+    let file1 = adapter.fixture.create_file("cache/file1.tmp", b"ITEM 1");
+    let meta1 = adapter.read_entry_metadata(&file1).unwrap();
+    let res1 = adapter.canonicalize_and_normalize(&file1).unwrap();
+
+    let file2 = adapter
+        .fixture
+        .create_file("cache/file2.tmp", b"ITEM 2 TO VANISH");
+    let meta2 = adapter.read_entry_metadata(&file2).unwrap();
+    let res2 = adapter.canonicalize_and_normalize(&file2).unwrap();
+
+    let file3 = adapter.fixture.create_file("cache/file3.tmp", b"ITEM 3");
+    let meta3 = adapter.read_entry_metadata(&file3).unwrap();
+    let res3 = adapter.canonicalize_and_normalize(&file3).unwrap();
+
+    let plan = ReviewPlan {
+        plan_id: "plan-vanish-batch".to_string(),
+        session_id: "sess-vanish-batch".to_string(),
+        items: vec![
+            PlanItemSummary {
+                item_id: "item-1".to_string(),
+                original_path: file1.to_string_lossy().to_string(),
+                size_bytes: 6,
+                class_name: "Rebuildable".to_string(),
+                action_name: "PermanentDelete".to_string(),
+                recoverable: false,
+            },
+            PlanItemSummary {
+                item_id: "item-2".to_string(),
+                original_path: file2.to_string_lossy().to_string(),
+                size_bytes: 16,
+                class_name: "Rebuildable".to_string(),
+                action_name: "PermanentDelete".to_string(),
+                recoverable: false,
+            },
+            PlanItemSummary {
+                item_id: "item-3".to_string(),
+                original_path: file3.to_string_lossy().to_string(),
+                size_bytes: 6,
+                class_name: "Rebuildable".to_string(),
+                action_name: "PermanentDelete".to_string(),
+                recoverable: false,
+            },
+        ],
+        default_action_mode: ActionMode::PermanentDelete,
+        created_at_ms: 1000,
+    };
+
+    let details = vec![
+        PlanItemDetail {
+            item_id: "item-1".to_string(),
+            plan_id: "plan-vanish-batch".to_string(),
+            original_path: file1.clone(),
+            canonical_path: res1.canonical,
+            device_id: meta1.identity.device_id,
+            inode: meta1.identity.inode,
+            size_bytes: 6,
+            class_name: "Rebuildable".to_string(),
+            rule_id: "rule.cache".to_string(),
+            rule_version: 1,
+            action_name: "PermanentDelete".to_string(),
+            recoverable: false,
+        },
+        PlanItemDetail {
+            item_id: "item-2".to_string(),
+            plan_id: "plan-vanish-batch".to_string(),
+            original_path: file2.clone(),
+            canonical_path: res2.canonical,
+            device_id: meta2.identity.device_id,
+            inode: meta2.identity.inode,
+            size_bytes: 16,
+            class_name: "Rebuildable".to_string(),
+            rule_id: "rule.cache".to_string(),
+            rule_version: 1,
+            action_name: "PermanentDelete".to_string(),
+            recoverable: false,
+        },
+        PlanItemDetail {
+            item_id: "item-3".to_string(),
+            plan_id: "plan-vanish-batch".to_string(),
+            original_path: file3.clone(),
+            canonical_path: res3.canonical,
+            device_id: meta3.identity.device_id,
+            inode: meta3.identity.inode,
+            size_bytes: 6,
+            class_name: "Rebuildable".to_string(),
+            rule_id: "rule.cache".to_string(),
+            rule_version: 1,
+            action_name: "PermanentDelete".to_string(),
+            recoverable: false,
+        },
+    ];
+
+    PlanRepository::insert_plan_with_items(&conn, &plan, &details).unwrap();
+    drop(conn);
+
+    // Delete item 2 before execution to simulate vanishing target
+    std::fs::remove_file(&file2).unwrap();
+    assert!(!file2.exists());
+
+    let args = ExecutePlanArgs {
+        plan_id: "plan-vanish-batch".to_string(),
+        action_mode: ActionMode::PermanentDelete,
+    };
+
+    let summary = execute_plan_core(args, &db, &adapter, None).unwrap();
+
+    // Verify batch did not abort: items 1 and 3 succeeded, item 2 recorded as vanished
+    assert_eq!(summary.succeeded_items, 2);
+    assert_eq!(summary.vanished_items, 1);
+    assert_eq!(summary.failed_items, 0);
+    assert_eq!(summary.bytes_freed, 12);
+    assert_eq!(summary.item_outcomes.len(), 3);
+
+    let item2_outcome = summary
+        .item_outcomes
+        .iter()
+        .find(|o| o.item_id == "item-2")
+        .unwrap();
+    assert_eq!(item2_outcome.status, ItemOutcomeStatus::Vanished);
+    assert_eq!(item2_outcome.bytes_reclaimed, 0);
+
+    let item1_outcome = summary
+        .item_outcomes
+        .iter()
+        .find(|o| o.item_id == "item-1")
+        .unwrap();
+    assert_eq!(item1_outcome.status, ItemOutcomeStatus::Succeeded);
+    assert_eq!(item1_outcome.bytes_reclaimed, 6);
+
+    let item3_outcome = summary
+        .item_outcomes
+        .iter()
+        .find(|o| o.item_id == "item-3")
+        .unwrap();
+    assert_eq!(item3_outcome.status, ItemOutcomeStatus::Succeeded);
+    assert_eq!(item3_outcome.bytes_reclaimed, 6);
+
+    assert!(!file1.exists());
+    assert!(!file3.exists());
 }
 
 // ============================================================================
@@ -770,6 +1554,12 @@ fn test_prevent_trash_totals_from_being_summed_with_permanently_reclaimed_bytes(
         succeeded_items: 5,
         failed_items: 0,
         bytes_freed: 0, // Trash does not permanently free bytes
+        bytes_pending_trash: 50_000_000,
+        skipped_protected: 0,
+        blocked_changed: 0,
+        vanished_items: 0,
+        permission_denied_items: 0,
+        item_outcomes: vec![],
     };
     assert_eq!(
         summary.bytes_freed, 0,
@@ -780,10 +1570,162 @@ fn test_prevent_trash_totals_from_being_summed_with_permanently_reclaimed_bytes(
 
 /// Damage prevented: Execution engine claiming freed bytes when action mode is Trash.
 #[test]
-#[ignore = "Execution engine milestone (item 19): execute_plan in Trash mode must report zero permanently reclaimed bytes"]
 fn test_prevent_trash_execution_from_claiming_freed_disk_space() {
-    // Commitment test for item 19 execution engine:
-    // execute_plan in Trash mode must calculate bytes_moved_to_trash, but bytes_freed must remain 0.
+    let adapter = ClassificationTestAdapter::new("exec-trash-totals");
+    let db = crate::storage::AppDatabase::open_in_memory().unwrap();
+    let conn = db.connection().lock().unwrap();
+
+    crate::scan::session::ScanSessionRepository::create_session(&conn, "sess-trash-totals", "/")
+        .unwrap();
+
+    let file_trash1 = adapter.fixture.create_file("cache/trash1.tmp", &[0u8; 100]);
+    let meta_t1 = adapter.read_entry_metadata(&file_trash1).unwrap();
+    let res_t1 = adapter.canonicalize_and_normalize(&file_trash1).unwrap();
+
+    let file_trash2 = adapter.fixture.create_file("cache/trash2.tmp", &[0u8; 200]);
+    let meta_t2 = adapter.read_entry_metadata(&file_trash2).unwrap();
+    let res_t2 = adapter.canonicalize_and_normalize(&file_trash2).unwrap();
+
+    let plan_trash = ReviewPlan {
+        plan_id: "plan-trash-mode".to_string(),
+        session_id: "sess-trash-totals".to_string(),
+        items: vec![
+            PlanItemSummary {
+                item_id: "trash-item-1".to_string(),
+                original_path: file_trash1.to_string_lossy().to_string(),
+                size_bytes: 100,
+                class_name: "Rebuildable".to_string(),
+                action_name: "Trash".to_string(),
+                recoverable: true,
+            },
+            PlanItemSummary {
+                item_id: "trash-item-2".to_string(),
+                original_path: file_trash2.to_string_lossy().to_string(),
+                size_bytes: 200,
+                class_name: "Rebuildable".to_string(),
+                action_name: "Trash".to_string(),
+                recoverable: true,
+            },
+        ],
+        default_action_mode: ActionMode::Trash,
+        created_at_ms: 1000,
+    };
+
+    let details_trash = vec![
+        PlanItemDetail {
+            item_id: "trash-item-1".to_string(),
+            plan_id: "plan-trash-mode".to_string(),
+            original_path: file_trash1.clone(),
+            canonical_path: res_t1.canonical,
+            device_id: meta_t1.identity.device_id,
+            inode: meta_t1.identity.inode,
+            size_bytes: 100,
+            class_name: "Rebuildable".to_string(),
+            rule_id: "rule.cache".to_string(),
+            rule_version: 1,
+            action_name: "Trash".to_string(),
+            recoverable: true,
+        },
+        PlanItemDetail {
+            item_id: "trash-item-2".to_string(),
+            plan_id: "plan-trash-mode".to_string(),
+            original_path: file_trash2.clone(),
+            canonical_path: res_t2.canonical,
+            device_id: meta_t2.identity.device_id,
+            inode: meta_t2.identity.inode,
+            size_bytes: 200,
+            class_name: "Rebuildable".to_string(),
+            rule_id: "rule.cache".to_string(),
+            rule_version: 1,
+            action_name: "Trash".to_string(),
+            recoverable: true,
+        },
+    ];
+
+    PlanRepository::insert_plan_with_items(&conn, &plan_trash, &details_trash).unwrap();
+
+    // Also insert a plan for PermanentDelete comparison
+    let file_perm = adapter.fixture.create_file("cache/perm.tmp", &[0u8; 150]);
+    let meta_p = adapter.read_entry_metadata(&file_perm).unwrap();
+    let res_p = adapter.canonicalize_and_normalize(&file_perm).unwrap();
+
+    let plan_perm = ReviewPlan {
+        plan_id: "plan-perm-mode".to_string(),
+        session_id: "sess-trash-totals".to_string(),
+        items: vec![PlanItemSummary {
+            item_id: "perm-item-1".to_string(),
+            original_path: file_perm.to_string_lossy().to_string(),
+            size_bytes: 150,
+            class_name: "Rebuildable".to_string(),
+            action_name: "PermanentDelete".to_string(),
+            recoverable: false,
+        }],
+        default_action_mode: ActionMode::PermanentDelete,
+        created_at_ms: 1000,
+    };
+
+    let details_perm = vec![PlanItemDetail {
+        item_id: "perm-item-1".to_string(),
+        plan_id: "plan-perm-mode".to_string(),
+        original_path: file_perm.clone(),
+        canonical_path: res_p.canonical,
+        device_id: meta_p.identity.device_id,
+        inode: meta_p.identity.inode,
+        size_bytes: 150,
+        class_name: "Rebuildable".to_string(),
+        rule_id: "rule.cache".to_string(),
+        rule_version: 1,
+        action_name: "PermanentDelete".to_string(),
+        recoverable: false,
+    }];
+
+    PlanRepository::insert_plan_with_items(&conn, &plan_perm, &details_perm).unwrap();
+    drop(conn);
+
+    // 1. Execute Trash plan
+    let trash_summary = execute_plan_core(
+        ExecutePlanArgs {
+            plan_id: "plan-trash-mode".to_string(),
+            action_mode: ActionMode::Trash,
+        },
+        &db,
+        &adapter,
+        None,
+    )
+    .unwrap();
+
+    // Critical assertion: bytes_freed must be strictly 0 in Trash mode
+    assert_eq!(
+        trash_summary.bytes_freed, 0,
+        "Safety failure: Trash mode must never claim freed bytes!"
+    );
+    assert_eq!(trash_summary.bytes_pending_trash, 300);
+    assert_eq!(trash_summary.succeeded_items, 2);
+    for outcome in &trash_summary.item_outcomes {
+        assert_eq!(outcome.bytes_reclaimed, 0);
+        assert!(outcome.bytes_pending_trash > 0);
+    }
+
+    // 2. Execute PermanentDelete plan
+    let perm_summary = execute_plan_core(
+        ExecutePlanArgs {
+            plan_id: "plan-perm-mode".to_string(),
+            action_mode: ActionMode::PermanentDelete,
+        },
+        &db,
+        &adapter,
+        None,
+    )
+    .unwrap();
+
+    // PermanentDelete must report bytes_freed and 0 bytes_pending_trash
+    assert_eq!(perm_summary.bytes_freed, 150);
+    assert_eq!(perm_summary.bytes_pending_trash, 0);
+    assert_eq!(perm_summary.succeeded_items, 1);
+    for outcome in &perm_summary.item_outcomes {
+        assert_eq!(outcome.bytes_reclaimed, 150);
+        assert_eq!(outcome.bytes_pending_trash, 0);
+    }
 }
 
 // ============================================================================
@@ -888,9 +1830,96 @@ fn test_prevent_hostile_names_from_injecting_command_arguments_or_corrupting_pat
 }
 
 /// Damage prevented: Execution engine passing hostile paths to shell subshells.
+#[cfg(unix)]
 #[test]
-#[ignore = "Execution engine milestone (item 19): execute_plan must execute direct filesystem syscalls without shell invocation"]
 fn test_prevent_execution_engine_from_invoking_shell_on_hostile_names() {
-    // Commitment test for item 19 execution engine:
-    // Deletion must invoke platform adapter syscalls, never `sh -c` or `rm`.
+    let adapter = ClassificationTestAdapter::new("exec-hostile-names");
+    let db = crate::storage::AppDatabase::open_in_memory().unwrap();
+    let conn = db.connection().lock().unwrap();
+
+    crate::scan::session::ScanSessionRepository::create_session(&conn, "sess-hostile-exec", "/")
+        .unwrap();
+
+    let hostile_files = adapter
+        .fixture
+        .create_hostile_name_files("hostile_exec_dir");
+
+    // Also create a sibling canary file that would be deleted if `rm -rf` was executed via a shell
+    let canary_file = adapter
+        .fixture
+        .create_file("canary.txt", b"CANARY DO NOT DELETE");
+
+    let mut item_summaries = Vec::new();
+    let mut item_details = Vec::new();
+
+    for (idx, file_path) in hostile_files.iter().enumerate() {
+        let meta = adapter.read_entry_metadata(file_path).unwrap();
+        let res = adapter.canonicalize_and_normalize(file_path).unwrap();
+        let item_id = format!("hostile-item-{idx}");
+
+        item_summaries.push(PlanItemSummary {
+            item_id: item_id.clone(),
+            original_path: file_path.to_string_lossy().to_string(),
+            size_bytes: meta.apparent_size,
+            class_name: "Rebuildable".to_string(),
+            action_name: "PermanentDelete".to_string(),
+            recoverable: false,
+        });
+
+        item_details.push(PlanItemDetail {
+            item_id,
+            plan_id: "plan-hostile-exec".to_string(),
+            original_path: file_path.clone(),
+            canonical_path: res.canonical,
+            device_id: meta.identity.device_id,
+            inode: meta.identity.inode,
+            size_bytes: meta.apparent_size,
+            class_name: "Rebuildable".to_string(),
+            rule_id: "rule.cache".to_string(),
+            rule_version: 1,
+            action_name: "PermanentDelete".to_string(),
+            recoverable: false,
+        });
+    }
+
+    let plan = ReviewPlan {
+        plan_id: "plan-hostile-exec".to_string(),
+        session_id: "sess-hostile-exec".to_string(),
+        items: item_summaries,
+        default_action_mode: ActionMode::PermanentDelete,
+        created_at_ms: 1000,
+    };
+
+    PlanRepository::insert_plan_with_items(&conn, &plan, &item_details).unwrap();
+    drop(conn);
+
+    let args = ExecutePlanArgs {
+        plan_id: "plan-hostile-exec".to_string(),
+        action_mode: ActionMode::PermanentDelete,
+    };
+
+    let summary = execute_plan_core(args, &db, &adapter, None).unwrap();
+
+    assert_eq!(summary.succeeded_items as usize, hostile_files.len());
+    assert_eq!(summary.failed_items, 0);
+
+    // Verify all hostile files were deleted safely
+    for file_path in &hostile_files {
+        assert!(
+            !file_path.exists(),
+            "Hostile file '{}' was not deleted",
+            file_path.display()
+        );
+    }
+
+    // Verify directory still exists and canary file was untouched
+    assert!(adapter.fixture.path("hostile_exec_dir").exists());
+    assert!(
+        canary_file.exists(),
+        "Safety failure: Canary file was destroyed by shell flag injection!"
+    );
+    assert_eq!(
+        std::fs::read(&canary_file).unwrap(),
+        b"CANARY DO NOT DELETE"
+    );
 }

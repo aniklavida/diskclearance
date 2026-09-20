@@ -50,6 +50,19 @@ impl CancellationRegistry {
         }
     }
 
+    pub fn get(&self, session_id: &str) -> Option<CancellationToken> {
+        let tokens = self.tokens.lock().expect("mutex poisoned");
+        tokens.get(session_id).cloned()
+    }
+
+    pub fn is_cancelled(&self, session_id: &str) -> bool {
+        let tokens = self.tokens.lock().expect("mutex poisoned");
+        tokens
+            .get(session_id)
+            .map(|t| t.is_cancelled())
+            .unwrap_or(false)
+    }
+
     pub fn unregister(&self, session_id: &str) {
         let mut tokens = self.tokens.lock().expect("mutex poisoned");
         tokens.remove(session_id);

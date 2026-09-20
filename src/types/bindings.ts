@@ -183,10 +183,34 @@ export type ActionMode = "trash" | "permanentDelete";
 
 export type ExecutePlanArgs = { planId: string; actionMode: ActionMode };
 
+export type ItemOutcomeStatus =
+  | "succeeded"
+  | "failed"
+  | "skippedProtected"
+  | "blockedChanged"
+  | "vanished"
+  | "permissionDenied"
+  | "unattempted";
+
+export type ItemOutcomeRecord = {
+  itemId: string;
+  originalPath: string;
+  status: ItemOutcomeStatus;
+  bytesReclaimed: bigint;
+  bytesPendingTrash: bigint;
+  errorMessage: string | null;
+};
+
 export type ExecutionSummary = {
   planId: string;
   actionMode: ActionMode;
   succeededItems: bigint;
   failedItems: bigint;
   bytesFreed: bigint;
+  bytesPendingTrash: bigint;
+  skippedProtected: bigint;
+  blockedChanged: bigint;
+  vanishedItems: bigint;
+  permissionDeniedItems: bigint;
+  itemOutcomes: Array<ItemOutcomeRecord>;
 };

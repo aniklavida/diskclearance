@@ -8,7 +8,10 @@ pub mod read;
 pub mod throttle;
 
 pub use cancellation::{CancellationRegistry, CancellationToken};
-pub use destructive::{ActionMode, ExecutePlanArgs, ExecutionSummary, execute_plan};
+pub use destructive::{
+    ActionMode, ExecutePlanArgs, ExecutionSummary, ItemOutcomeRecord, ItemOutcomeStatus,
+    execute_plan, execute_plan_core,
+};
 pub use error::CommandError;
 pub use events::*;
 pub use plan::{

@@ -538,7 +538,6 @@ mod tests {
     }
 
     #[test]
-    #[test]
     fn test_fetch_folder_aggregate_sums_correctly() {
         let db = AppDatabase::open_in_memory().unwrap();
         let conn = db.connection().lock().unwrap();

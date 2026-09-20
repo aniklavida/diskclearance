@@ -127,8 +127,20 @@ impl PlatformAdapter for ClassificationTestAdapter {
         Ok(SettingsDestination::SystemSettings)
     }
 
-    fn move_to_trash(&self, _path: &Path) -> Result<TrashedItem, PlatformError> {
-        Err(PlatformError::Unsupported("trash"))
+    fn move_to_trash(&self, path: &Path) -> Result<TrashedItem, PlatformError> {
+        if !path.exists() && !path.is_symlink() {
+            return Err(PlatformError::NotFound(path.to_path_buf()));
+        }
+        let trash_dir = self.fixture.path("simulated_trash");
+        std::fs::create_dir_all(&trash_dir).map_err(|e| PlatformError::Io(e.to_string()))?;
+        let filename = path.file_name().unwrap_or_default();
+        let trashed_path = trash_dir.join(filename);
+        std::fs::rename(path, &trashed_path).map_err(|e| PlatformError::Io(e.to_string()))?;
+        Ok(TrashedItem {
+            trashed_path,
+            original_path: path.to_path_buf(),
+            display_name: filename.to_string_lossy().to_string(),
+        })
     }
 
     fn enumerate_trash(&self) -> Result<Vec<TrashedItem>, PlatformError> {
@@ -193,8 +205,15 @@ impl PlatformAdapter for ClassificationTestAdapter {
     }
 
     fn read_entry_metadata(&self, path: &Path) -> Result<EntryMetadata, PlatformError> {
-        let meta = std::fs::symlink_metadata(path)
-            .map_err(|_| PlatformError::NotFound(path.to_path_buf()))?;
+        let meta = std::fs::symlink_metadata(path).map_err(|e| match e.kind() {
+            std::io::ErrorKind::NotFound => PlatformError::NotFound(path.to_path_buf()),
+            std::io::ErrorKind::PermissionDenied => PlatformError::PermissionDenied {
+                scope: path.to_path_buf(),
+                reason: e.to_string(),
+                settings_target: None,
+            },
+            _ => PlatformError::Io(e.to_string()),
+        })?;
         let entry_type = if meta.is_symlink() {
             EntryType::Symlink
         } else if meta.is_dir() {
