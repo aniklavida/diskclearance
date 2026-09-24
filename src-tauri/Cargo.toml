@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Safety-first storage analysis and cleanup"
 authors = ["Md Habibur Rahman"]
 edition = "2024"
+rust-version = "1.88"
 license = "MIT"
 repository = "https://github.com/aniklavida/diskclearance"
 

@@ -136,13 +136,10 @@ fn delete_directory_recursively(
     max_depth: usize,
 ) -> Result<(), std::io::Error> {
     if current_depth > max_depth {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            format!(
-                "Maximum directory recursion depth of {max_depth} exceeded at '{}'",
-                dir_path.display()
-            ),
-        ));
+        return Err(std::io::Error::other(format!(
+            "Maximum directory recursion depth of {max_depth} exceeded at '{}'",
+            dir_path.display()
+        )));
     }
 
     for entry_res in std::fs::read_dir(dir_path)? {
@@ -249,23 +246,21 @@ pub fn execute_plan_core(
 
     for (idx, item) in items.iter().enumerate() {
         // Inspect cancellation token before each item
-        if let Some(token) = &cancel_token {
-            if token.is_cancelled() {
-                for remaining in &items[idx..] {
-                    item_outcomes.push(ItemOutcomeRecord {
-                        item_id: remaining.item_id.clone(),
-                        original_path: remaining.original_path.to_string_lossy().to_string(),
-                        status: ItemOutcomeStatus::Unattempted,
-                        bytes_reclaimed: 0,
-                        bytes_pending_trash: 0,
-                        error_message: Some(
-                            "Operation cancelled before item execution".to_string(),
-                        ),
-                        trashed_path: None,
-                    });
-                }
-                break;
+        if let Some(token) = &cancel_token
+            && token.is_cancelled()
+        {
+            for remaining in &items[idx..] {
+                item_outcomes.push(ItemOutcomeRecord {
+                    item_id: remaining.item_id.clone(),
+                    original_path: remaining.original_path.to_string_lossy().to_string(),
+                    status: ItemOutcomeStatus::Unattempted,
+                    bytes_reclaimed: 0,
+                    bytes_pending_trash: 0,
+                    error_message: Some("Operation cancelled before item execution".to_string()),
+                    trashed_path: None,
+                });
             }
+            break;
         }
 
         let orig_path_str = item.original_path.to_string_lossy().to_string();

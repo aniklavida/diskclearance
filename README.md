@@ -25,8 +25,8 @@ The first supported platform will be macOS 13 Ventura and later, on **Apple Sili
 
 Requirements:
 
-- Node.js 22 or later
-- Rust stable
+- Node.js 22 or later (declared as `engines.node` in `package.json`)
+- Rust 1.88 or later, the minimum pinned in `rust-toolchain.toml`
 - macOS or Windows system dependencies required by Tauri 2
 
 ```bash
@@ -44,3 +44,5 @@ DiskClearance handles destructive filesystem operations. Security or data-loss i
 ## Contributing
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md). The project is licensed under the [MIT License](LICENSE).
+
+Direct dependencies and their licences are recorded in [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md). CycloneDX SBOMs for both ecosystems are generated from the committed lockfiles by `scripts/generate-sbom.sh`; nothing is attached to a release until the release checklist is satisfied.

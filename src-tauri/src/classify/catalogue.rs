@@ -50,10 +50,10 @@ impl Default for RuleCatalogue {
 
 impl RuleCatalogue {
     pub fn new() -> Self {
-        let mut rules = Vec::new();
+        let rules = vec![
 
         // 1. Rebuildable rules with verified owning tools and regeneration commands
-        rules.push(CatalogueRule {
+            CatalogueRule {
             descriptor: RuleDescriptor {
                 id: "rule.rebuildable.cargo_target".to_string(),
                 version: 1,
@@ -67,9 +67,9 @@ impl RuleCatalogue {
                 },
             },
             matcher: RuleMatcher::HomeRelativePrefix(".cargo/registry/cache".into()),
-        });
+            },
 
-        rules.push(CatalogueRule {
+            CatalogueRule {
             descriptor: RuleDescriptor {
                 id: "rule.rebuildable.xcode_derived_data".to_string(),
                 version: 1,
@@ -83,9 +83,9 @@ impl RuleCatalogue {
                 },
             },
             matcher: RuleMatcher::HomeRelativePrefix("Library/Developer/Xcode/DerivedData".into()),
-        });
+            },
 
-        rules.push(CatalogueRule {
+            CatalogueRule {
             descriptor: RuleDescriptor {
                 id: "rule.rebuildable.homebrew_cache".to_string(),
                 version: 1,
@@ -100,9 +100,9 @@ impl RuleCatalogue {
                 },
             },
             matcher: RuleMatcher::CachesRelativePrefix("Homebrew".into()),
-        });
+            },
 
-        rules.push(CatalogueRule {
+            CatalogueRule {
             descriptor: RuleDescriptor {
                 id: "rule.rebuildable.npm_cache".to_string(),
                 version: 1,
@@ -117,9 +117,9 @@ impl RuleCatalogue {
                 },
             },
             matcher: RuleMatcher::HomeRelativePrefix(".npm/_cacache".into()),
-        });
+            },
 
-        rules.push(CatalogueRule {
+            CatalogueRule {
             descriptor: RuleDescriptor {
                 id: "rule.rebuildable.gradle_cache".to_string(),
                 version: 1,
@@ -134,9 +134,9 @@ impl RuleCatalogue {
                 },
             },
             matcher: RuleMatcher::HomeRelativePrefix(".gradle/caches".into()),
-        });
+            },
 
-        rules.push(CatalogueRule {
+            CatalogueRule {
             descriptor: RuleDescriptor {
                 id: "rule.rebuildable.go_build_cache".to_string(),
                 version: 1,
@@ -151,10 +151,10 @@ impl RuleCatalogue {
                 },
             },
             matcher: RuleMatcher::CachesRelativePrefix("go-build".into()),
-        });
+            },
 
         // 2. Review rules
-        rules.push(CatalogueRule {
+            CatalogueRule {
             descriptor: RuleDescriptor {
                 id: "rule.review.durable_models".to_string(),
                 version: 1,
@@ -166,9 +166,9 @@ impl RuleCatalogue {
                 recoverability: Recoverability::Irrecoverable,
             },
             matcher: RuleMatcher::DurableModelStorage,
-        });
+            },
 
-        rules.push(CatalogueRule {
+            CatalogueRule {
             descriptor: RuleDescriptor {
                 id: "rule.review.downloads".to_string(),
                 version: 1,
@@ -182,9 +182,9 @@ impl RuleCatalogue {
                 recoverability: Recoverability::TrashRecoverable,
             },
             matcher: RuleMatcher::HomeRelativePrefix("Downloads".into()),
-        });
+            },
 
-        rules.push(CatalogueRule {
+            CatalogueRule {
             descriptor: RuleDescriptor {
                 id: "rule.review.git_working_tree".to_string(),
                 version: 1,
@@ -196,9 +196,9 @@ impl RuleCatalogue {
                 recoverability: Recoverability::SourceControlled { remote: None },
             },
             matcher: RuleMatcher::GitWorkingTreeUserFile,
-        });
+            },
 
-        rules.push(CatalogueRule {
+            CatalogueRule {
             descriptor: RuleDescriptor {
                 id: "rule.review.mount_boundary".to_string(),
                 version: 1,
@@ -212,7 +212,9 @@ impl RuleCatalogue {
                 recoverability: Recoverability::Irrecoverable,
             },
             matcher: RuleMatcher::MountBoundaryCrossed,
-        });
+            },
+
+        ];
 
         Self { rules }
     }
@@ -288,78 +290,78 @@ impl RuleCatalogue {
         }
 
         // Priority 2: Symlink pointing to protected or external target
-        if ctx.is_symlink {
-            if let Some(target) = &ctx.symlink_target_canonical {
-                // If symlink target is a protected root or outside cache scope
-                let target_ctx = MatchContext {
-                    original_path: target,
-                    canonical_path: target,
-                    normalized_path: target,
-                    entry_type: ctx.entry_type,
-                    identity: ctx.identity,
-                    apparent_size: ctx.apparent_size,
-                    allocated_size: ctx.allocated_size,
-                    modified_ms: ctx.modified_ms,
-                    is_symlink: false,
-                    symlink_target_canonical: None,
-                    home_dir: ctx.home_dir,
-                    app_support_dir: ctx.app_support_dir,
-                    caches_dir: ctx.caches_dir,
-                    crosses_mount_boundary: ctx.crosses_mount_boundary,
-                    inside_git_repo: ctx.inside_git_repo,
-                    is_git_internal: ctx.is_git_internal,
+        if ctx.is_symlink
+            && let Some(target) = &ctx.symlink_target_canonical
+        {
+            // If symlink target is a protected root or outside cache scope
+            let target_ctx = MatchContext {
+                original_path: target,
+                canonical_path: target,
+                normalized_path: target,
+                entry_type: ctx.entry_type,
+                identity: ctx.identity,
+                apparent_size: ctx.apparent_size,
+                allocated_size: ctx.allocated_size,
+                modified_ms: ctx.modified_ms,
+                is_symlink: false,
+                symlink_target_canonical: None,
+                home_dir: ctx.home_dir,
+                app_support_dir: ctx.app_support_dir,
+                caches_dir: ctx.caches_dir,
+                crosses_mount_boundary: ctx.crosses_mount_boundary,
+                inside_git_repo: ctx.inside_git_repo,
+                is_git_internal: ctx.is_git_internal,
+            };
+            if let Some(reason) = evaluate_protected_roots(&target_ctx) {
+                let evidence = Evidence {
+                    rule_id: "rule.protection.symlink_target_protected".to_string(),
+                    rule_version: 1,
+                    owning_tool: "Symlink Safety Guard".to_string(),
+                    matched_reason: format!(
+                        "Symlink points to protected target: {} ({})",
+                        target.display(),
+                        reason.description
+                    ),
+                    regenerator: None,
+                    last_activity_ms: ctx.modified_ms,
+                    recoverability: Recoverability::Irrecoverable,
+                    confidence: Confidence::Definite,
                 };
-                if let Some(reason) = evaluate_protected_roots(&target_ctx) {
-                    let evidence = Evidence {
-                        rule_id: "rule.protection.symlink_target_protected".to_string(),
-                        rule_version: 1,
-                        owning_tool: "Symlink Safety Guard".to_string(),
-                        matched_reason: format!(
-                            "Symlink points to protected target: {} ({})",
-                            target.display(),
-                            reason.description
-                        ),
-                        regenerator: None,
-                        last_activity_ms: ctx.modified_ms,
-                        recoverability: Recoverability::Irrecoverable,
-                        confidence: Confidence::Definite,
-                    };
-                    evidence.validate().expect("symlink evidence must be valid");
+                evidence.validate().expect("symlink evidence must be valid");
 
-                    return ClassifiedFinding {
-                        path: ctx.original_path.to_string_lossy().to_string(),
-                        canonical_path: ctx.canonical_path.to_string_lossy().to_string(),
-                        size_bytes: ctx.apparent_size,
-                        safety_class: SafetyClass::Protected,
-                        evidence,
-                    };
-                }
+                return ClassifiedFinding {
+                    path: ctx.original_path.to_string_lossy().to_string(),
+                    canonical_path: ctx.canonical_path.to_string_lossy().to_string(),
+                    size_bytes: ctx.apparent_size,
+                    safety_class: SafetyClass::Protected,
+                    evidence,
+                };
+            }
 
-                // If symlink points into a user git repo or source tree
-                if target_ctx.inside_git_repo {
-                    let evidence = Evidence {
-                        rule_id: "rule.review.symlink_into_source_tree".to_string(),
-                        rule_version: 1,
-                        owning_tool: "Symlink Safety Guard".to_string(),
-                        matched_reason: format!(
-                            "Symlink points into source-controlled working tree: {}",
-                            target.display()
-                        ),
-                        regenerator: None,
-                        last_activity_ms: ctx.modified_ms,
-                        recoverability: Recoverability::SourceControlled { remote: None },
-                        confidence: Confidence::Definite,
-                    };
-                    evidence.validate().expect("symlink evidence must be valid");
+            // If symlink points into a user git repo or source tree
+            if target_ctx.inside_git_repo {
+                let evidence = Evidence {
+                    rule_id: "rule.review.symlink_into_source_tree".to_string(),
+                    rule_version: 1,
+                    owning_tool: "Symlink Safety Guard".to_string(),
+                    matched_reason: format!(
+                        "Symlink points into source-controlled working tree: {}",
+                        target.display()
+                    ),
+                    regenerator: None,
+                    last_activity_ms: ctx.modified_ms,
+                    recoverability: Recoverability::SourceControlled { remote: None },
+                    confidence: Confidence::Definite,
+                };
+                evidence.validate().expect("symlink evidence must be valid");
 
-                    return ClassifiedFinding {
-                        path: ctx.original_path.to_string_lossy().to_string(),
-                        canonical_path: ctx.canonical_path.to_string_lossy().to_string(),
-                        size_bytes: ctx.apparent_size,
-                        safety_class: SafetyClass::Review,
-                        evidence,
-                    };
-                }
+                return ClassifiedFinding {
+                    path: ctx.original_path.to_string_lossy().to_string(),
+                    canonical_path: ctx.canonical_path.to_string_lossy().to_string(),
+                    size_bytes: ctx.apparent_size,
+                    safety_class: SafetyClass::Review,
+                    evidence,
+                };
             }
         }
 

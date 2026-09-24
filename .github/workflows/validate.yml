@@ -30,8 +30,33 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt
       - run: cargo fmt --manifest-path src-tauri/Cargo.toml --check
+      - run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features -- -D warnings
       - run: cargo test --manifest-path src-tauri/Cargo.toml
       - run: cargo check --manifest-path src-tauri/Cargo.toml
+
+  supply-chain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install audit and SBOM tooling
+        run: |
+          cargo install cargo-audit --locked
+          cargo install cargo-cyclonedx --locked
+      - name: Platform boundary check
+        run: bash scripts/check-platform-boundary.sh
+      - name: npm audit
+        run: npm audit --audit-level=moderate
+      - name: cargo audit
+        run: cargo audit --file src-tauri/Cargo.lock
+      - name: Generate CycloneDX SBOMs
+        run: bash scripts/generate-sbom.sh
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sbom
+          path: sbom/
+          if-no-files-found: error

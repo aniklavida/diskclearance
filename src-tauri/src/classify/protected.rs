@@ -102,35 +102,35 @@ impl ProtectedRootDescriptor {
         }
 
         // 6. Check symlink targets: if a symlink resolves to a protected location
-        if ctx.is_symlink {
-            if let Some(target) = &ctx.symlink_target_canonical {
-                if let Some(exact) = self.exact_system_path {
-                    let path = Path::new(exact);
-                    if target == path {
+        if ctx.is_symlink
+            && let Some(target) = &ctx.symlink_target_canonical
+        {
+            if let Some(exact) = self.exact_system_path {
+                let path = Path::new(exact);
+                if target == path {
+                    return true;
+                }
+            }
+            if let Some(prefix) = self.system_prefix {
+                let prefix_path = Path::new(prefix);
+                if target.starts_with(prefix_path) {
+                    return true;
+                }
+            }
+            if let Some(home) = ctx.home_dir {
+                let home_canon = home.canonicalize().unwrap_or_else(|_| home.to_path_buf());
+                if let Some(rel) = self.home_relative_prefix {
+                    let full = home.join(rel);
+                    let full_canon = home_canon.join(rel);
+                    if target.starts_with(&full) || target.starts_with(&full_canon) {
                         return true;
                     }
                 }
-                if let Some(prefix) = self.system_prefix {
-                    let prefix_path = Path::new(prefix);
-                    if target.starts_with(prefix_path) {
+                if let Some(rel) = self.home_relative_exact {
+                    let full = home.join(rel);
+                    let full_canon = home_canon.join(rel);
+                    if target == &full || target == &full_canon {
                         return true;
-                    }
-                }
-                if let Some(home) = ctx.home_dir {
-                    let home_canon = home.canonicalize().unwrap_or_else(|_| home.to_path_buf());
-                    if let Some(rel) = self.home_relative_prefix {
-                        let full = home.join(rel);
-                        let full_canon = home_canon.join(rel);
-                        if target.starts_with(&full) || target.starts_with(&full_canon) {
-                            return true;
-                        }
-                    }
-                    if let Some(rel) = self.home_relative_exact {
-                        let full = home.join(rel);
-                        let full_canon = home_canon.join(rel);
-                        if target == &full || target == &full_canon {
-                            return true;
-                        }
                     }
                 }
             }

@@ -282,8 +282,7 @@ impl std::fmt::Display for RevalidationFailure {
             } => {
                 write!(
                     f,
-                    "rule '{}' version mismatch (plan had v{}, catalogue has v{})",
-                    rule_id, plan_version, current_version
+                    "rule '{rule_id}' version mismatch (plan had v{plan_version}, catalogue has v{current_version})"
                 )
             }
             Self::PlatformError(err) => write!(f, "platform error during revalidation: {err}"),
@@ -376,14 +375,13 @@ pub fn revalidate_plan_item(
         .all_descriptors()
         .iter()
         .find(|r| r.id == item.rule_id)
+        && desc.version != item.rule_version
     {
-        if desc.version != item.rule_version {
-            return Err(RevalidationFailure::RuleVersionChanged {
-                rule_id: item.rule_id.clone(),
-                plan_version: item.rule_version,
-                current_version: desc.version,
-            });
-        }
+        return Err(RevalidationFailure::RuleVersionChanged {
+            rule_id: item.rule_id.clone(),
+            plan_version: item.rule_version,
+            current_version: desc.version,
+        });
     }
 
     Ok(())

@@ -59,6 +59,84 @@ CREATE INDEX idx_findings_safety_class ON findings(safety_class);
 CREATE INDEX idx_scan_sessions_status ON scan_sessions(status);
 ";
 
+const MIGRATION_0003_REVIEW_PLANS: &str = "
+CREATE TABLE review_plans (
+    id TEXT PRIMARY KEY NOT NULL,
+    session_id TEXT NOT NULL REFERENCES scan_sessions(id) ON DELETE CASCADE,
+    default_action_mode TEXT NOT NULL,
+    created_at_ms INTEGER NOT NULL
+);
+
+CREATE TABLE plan_items (
+    item_id TEXT PRIMARY KEY NOT NULL,
+    plan_id TEXT NOT NULL REFERENCES review_plans(id) ON DELETE CASCADE,
+    original_path TEXT NOT NULL,
+    canonical_path TEXT NOT NULL,
+    device_id INTEGER NOT NULL,
+    inode INTEGER NOT NULL,
+    size_bytes INTEGER NOT NULL,
+    class_name TEXT NOT NULL,
+    rule_id TEXT NOT NULL,
+    rule_version INTEGER NOT NULL,
+    action_name TEXT NOT NULL,
+    recoverable INTEGER NOT NULL
+);
+";
+
+const MIGRATION_0004_OPERATIONS_AND_HISTORY: &str = "
+CREATE TABLE operations (
+    id TEXT PRIMARY KEY NOT NULL,
+    plan_id TEXT NOT NULL REFERENCES review_plans(id),
+    action_mode TEXT NOT NULL,
+    created_at_ms INTEGER NOT NULL,
+    completed_at_ms INTEGER NOT NULL,
+    succeeded_items INTEGER NOT NULL DEFAULT 0,
+    failed_items INTEGER NOT NULL DEFAULT 0,
+    skipped_items INTEGER NOT NULL DEFAULT 0,
+    blocked_items INTEGER NOT NULL DEFAULT 0,
+    vanished_items INTEGER NOT NULL DEFAULT 0,
+    permission_denied_items INTEGER NOT NULL DEFAULT 0,
+    bytes_pending_trash INTEGER NOT NULL DEFAULT 0,
+    bytes_permanently_reclaimed INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE operation_items (
+    id TEXT PRIMARY KEY NOT NULL,
+    operation_id TEXT NOT NULL REFERENCES operations(id) ON DELETE CASCADE,
+    item_id TEXT NOT NULL,
+    original_path TEXT NOT NULL,
+    canonical_path TEXT NOT NULL,
+    trashed_path TEXT,
+    device_id INTEGER NOT NULL,
+    inode INTEGER NOT NULL,
+    size_bytes INTEGER NOT NULL,
+    status TEXT NOT NULL,
+    bytes_pending_trash INTEGER NOT NULL DEFAULT 0,
+    bytes_permanently_reclaimed INTEGER NOT NULL DEFAULT 0,
+    error_message TEXT,
+    created_at_ms INTEGER NOT NULL
+);
+
+CREATE INDEX idx_operation_items_op_id ON operation_items(operation_id);
+CREATE INDEX idx_operation_items_status ON operation_items(status);
+CREATE INDEX idx_operations_created_at ON operations(created_at_ms);
+
+CREATE TABLE restore_outcomes (
+    id TEXT PRIMARY KEY NOT NULL,
+    operation_item_id TEXT NOT NULL REFERENCES operation_items(id) ON DELETE CASCADE,
+    source_trashed_path TEXT NOT NULL,
+    restored_to_path TEXT NOT NULL,
+    device_id INTEGER NOT NULL,
+    inode INTEGER NOT NULL,
+    size_bytes INTEGER NOT NULL,
+    status TEXT NOT NULL,
+    error_message TEXT,
+    restored_at_ms INTEGER NOT NULL
+);
+
+CREATE INDEX idx_restore_outcomes_item_id ON restore_outcomes(operation_item_id);
+";
+
 #[derive(Debug)]
 pub enum StorageError {
     Platform(PlatformError),
@@ -205,13 +283,13 @@ pub fn run_migrations_with(
 ) -> Result<MigrationReport, StorageError> {
     let max_known_version = migrations.last().map(|(v, _)| *v).unwrap_or(0);
 
-    if let Some(current) = highest_applied_version(connection)? {
-        if current > max_known_version {
-            return Err(StorageError::DowngradeNotSupported {
-                found_version: current,
-                max_known_version,
-            });
-        }
+    if let Some(current) = highest_applied_version(connection)?
+        && current > max_known_version
+    {
+        return Err(StorageError::DowngradeNotSupported {
+            found_version: current,
+            max_known_version,
+        });
     }
 
     let current = highest_applied_version(connection)?.unwrap_or(0);
@@ -291,10 +369,10 @@ fn validate_existing_file(path: &Path) -> ValidationResult {
     };
 
     if let Err(e) = configure_connection(&conn) {
-        if let StorageError::Sqlite(ref sql_err) = e {
-            if is_rusqlite_corrupt(sql_err) {
-                return ValidationResult::Corrupt(sql_err.to_string());
-            }
+        if let StorageError::Sqlite(ref sql_err) = e
+            && is_rusqlite_corrupt(sql_err)
+        {
+            return ValidationResult::Corrupt(sql_err.to_string());
         }
         return ValidationResult::NonCorruption(e);
     }
@@ -441,8 +519,10 @@ mod tests {
         let temp_dir = DisposableTempDir::new("first-launch");
         let app_support = temp_dir.path.join("Library/Application Support");
 
-        let mut adapter = TestAdapter::default();
-        adapter.app_support = app_support.clone();
+        let adapter = TestAdapter {
+            app_support: app_support.clone(),
+            ..Default::default()
+        };
 
         let db = open_database_for_adapter(&adapter).expect("open database");
         assert!(!db.was_recovered());
@@ -624,81 +704,3 @@ mod tests {
         assert!(success.is_ok());
     }
 }
-
-const MIGRATION_0003_REVIEW_PLANS: &str = "
-CREATE TABLE review_plans (
-    id TEXT PRIMARY KEY NOT NULL,
-    session_id TEXT NOT NULL REFERENCES scan_sessions(id) ON DELETE CASCADE,
-    default_action_mode TEXT NOT NULL,
-    created_at_ms INTEGER NOT NULL
-);
-
-CREATE TABLE plan_items (
-    item_id TEXT PRIMARY KEY NOT NULL,
-    plan_id TEXT NOT NULL REFERENCES review_plans(id) ON DELETE CASCADE,
-    original_path TEXT NOT NULL,
-    canonical_path TEXT NOT NULL,
-    device_id INTEGER NOT NULL,
-    inode INTEGER NOT NULL,
-    size_bytes INTEGER NOT NULL,
-    class_name TEXT NOT NULL,
-    rule_id TEXT NOT NULL,
-    rule_version INTEGER NOT NULL,
-    action_name TEXT NOT NULL,
-    recoverable INTEGER NOT NULL
-);
-";
-
-const MIGRATION_0004_OPERATIONS_AND_HISTORY: &str = "
-CREATE TABLE operations (
-    id TEXT PRIMARY KEY NOT NULL,
-    plan_id TEXT NOT NULL REFERENCES review_plans(id),
-    action_mode TEXT NOT NULL,
-    created_at_ms INTEGER NOT NULL,
-    completed_at_ms INTEGER NOT NULL,
-    succeeded_items INTEGER NOT NULL DEFAULT 0,
-    failed_items INTEGER NOT NULL DEFAULT 0,
-    skipped_items INTEGER NOT NULL DEFAULT 0,
-    blocked_items INTEGER NOT NULL DEFAULT 0,
-    vanished_items INTEGER NOT NULL DEFAULT 0,
-    permission_denied_items INTEGER NOT NULL DEFAULT 0,
-    bytes_pending_trash INTEGER NOT NULL DEFAULT 0,
-    bytes_permanently_reclaimed INTEGER NOT NULL DEFAULT 0
-);
-
-CREATE TABLE operation_items (
-    id TEXT PRIMARY KEY NOT NULL,
-    operation_id TEXT NOT NULL REFERENCES operations(id) ON DELETE CASCADE,
-    item_id TEXT NOT NULL,
-    original_path TEXT NOT NULL,
-    canonical_path TEXT NOT NULL,
-    trashed_path TEXT,
-    device_id INTEGER NOT NULL,
-    inode INTEGER NOT NULL,
-    size_bytes INTEGER NOT NULL,
-    status TEXT NOT NULL,
-    bytes_pending_trash INTEGER NOT NULL DEFAULT 0,
-    bytes_permanently_reclaimed INTEGER NOT NULL DEFAULT 0,
-    error_message TEXT,
-    created_at_ms INTEGER NOT NULL
-);
-
-CREATE INDEX idx_operation_items_op_id ON operation_items(operation_id);
-CREATE INDEX idx_operation_items_status ON operation_items(status);
-CREATE INDEX idx_operations_created_at ON operations(created_at_ms);
-
-CREATE TABLE restore_outcomes (
-    id TEXT PRIMARY KEY NOT NULL,
-    operation_item_id TEXT NOT NULL REFERENCES operation_items(id) ON DELETE CASCADE,
-    source_trashed_path TEXT NOT NULL,
-    restored_to_path TEXT NOT NULL,
-    device_id INTEGER NOT NULL,
-    inode INTEGER NOT NULL,
-    size_bytes INTEGER NOT NULL,
-    status TEXT NOT NULL,
-    error_message TEXT,
-    restored_at_ms INTEGER NOT NULL
-);
-
-CREATE INDEX idx_restore_outcomes_item_id ON restore_outcomes(operation_item_id);
-";

@@ -3,11 +3,15 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && tsc -p tsconfig.node.json --noEmit && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
+    "sbom": "bash scripts/generate-sbom.sh",
     "types:generate": "cargo run --manifest-path src-tauri/Cargo.toml --bin export_types",
     "types:check": "cargo run --manifest-path src-tauri/Cargo.toml --bin export_types -- --check",
     "format": "prettier --write .",
