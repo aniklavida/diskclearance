@@ -7,6 +7,7 @@
     "confidence": "definite",
     "userSentence": "User synchronized cloud storage managed by Box.",
     "whatRegenerates": null,
+    "regenerationCost": null,
     "recoverability": {
       "kind": "irrecoverable"
     }
@@ -19,6 +20,7 @@
     "confidence": "definite",
     "userSentence": "User synchronized cloud storage managed by Dropbox.",
     "whatRegenerates": null,
+    "regenerationCost": null,
     "recoverability": {
       "kind": "irrecoverable"
     }
@@ -31,6 +33,7 @@
     "confidence": "definite",
     "userSentence": "User synchronized cloud storage managed by Google Drive.",
     "whatRegenerates": null,
+    "regenerationCost": null,
     "recoverability": {
       "kind": "irrecoverable"
     }
@@ -43,6 +46,7 @@
     "confidence": "definite",
     "userSentence": "Local cache and synchronization container for Apple iCloud Drive.",
     "whatRegenerates": null,
+    "regenerationCost": null,
     "recoverability": {
       "kind": "irrecoverable"
     }
@@ -55,6 +59,7 @@
     "confidence": "definite",
     "userSentence": "User synchronized cloud storage managed by Nextcloud.",
     "whatRegenerates": null,
+    "regenerationCost": null,
     "recoverability": {
       "kind": "irrecoverable"
     }
@@ -67,6 +72,46 @@
     "confidence": "definite",
     "userSentence": "User synchronized cloud storage managed by Microsoft OneDrive.",
     "whatRegenerates": null,
+    "regenerationCost": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.containers.docker_desktop_volumes",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "Volume data inside Docker Desktop VM storage; inspect only as an individual container volume.",
+    "whatRegenerates": null,
+    "regenerationCost": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.containers.docker_volumes",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "Container volumes may hold real local databases and user data; they are not build caches.",
+    "whatRegenerates": null,
+    "regenerationCost": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.containers.podman_volumes",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "Podman volumes may hold real local databases and user data; they are not image caches.",
+    "whatRegenerates": null,
+    "regenerationCost": null,
     "recoverability": {
       "kind": "irrecoverable"
     }
@@ -79,6 +124,7 @@
     "confidence": "definite",
     "userSentence": "PGP secret keys, public keyrings, and trust database.",
     "whatRegenerates": null,
+    "regenerationCost": null,
     "recoverability": {
       "kind": "irrecoverable"
     }
@@ -91,6 +137,7 @@
     "confidence": "definite",
     "userSentence": "Secure Shell private keys, identity files, and known host signatures.",
     "whatRegenerates": null,
+    "regenerationCost": null,
     "recoverability": {
       "kind": "irrecoverable"
     }
@@ -103,6 +150,7 @@
     "confidence": "definite",
     "userSentence": "User notes, attachments, and non-rebuildable local SQLite databases.",
     "whatRegenerates": null,
+    "regenerationCost": null,
     "recoverability": {
       "kind": "irrecoverable"
     }
@@ -115,6 +163,7 @@
     "confidence": "definite",
     "userSentence": "Local mailboxes, cached drafts, and email messages.",
     "whatRegenerates": null,
+    "regenerationCost": null,
     "recoverability": {
       "kind": "irrecoverable"
     }
@@ -127,6 +176,7 @@
     "confidence": "definite",
     "userSentence": "iMessage chat history, attachments, and conversation threads.",
     "whatRegenerates": null,
+    "regenerationCost": null,
     "recoverability": {
       "kind": "irrecoverable"
     }
@@ -139,6 +189,7 @@
     "confidence": "definite",
     "userSentence": "Critical vendor system support files.",
     "whatRegenerates": null,
+    "regenerationCost": null,
     "recoverability": {
       "kind": "irrecoverable"
     }
@@ -151,6 +202,7 @@
     "confidence": "definite",
     "userSentence": "Local directory node and user account database components.",
     "whatRegenerates": null,
+    "regenerationCost": null,
     "recoverability": {
       "kind": "irrecoverable"
     }
@@ -163,6 +215,7 @@
     "confidence": "definite",
     "userSentence": "System kernel extensions and low-level drivers.",
     "whatRegenerates": null,
+    "regenerationCost": null,
     "recoverability": {
       "kind": "irrecoverable"
     }
@@ -175,6 +228,7 @@
     "confidence": "definite",
     "userSentence": "System-wide cryptographic trust store and root certificates.",
     "whatRegenerates": null,
+    "regenerationCost": null,
     "recoverability": {
       "kind": "irrecoverable"
     }
@@ -187,6 +241,7 @@
     "confidence": "definite",
     "userSentence": "Machine-wide system configuration property lists.",
     "whatRegenerates": null,
+    "regenerationCost": null,
     "recoverability": {
       "kind": "irrecoverable"
     }
@@ -199,6 +254,7 @@
     "confidence": "definite",
     "userSentence": "Security authorization plugins, trust evaluation, and certificates.",
     "whatRegenerates": null,
+    "regenerationCost": null,
     "recoverability": {
       "kind": "irrecoverable"
     }
@@ -211,6 +267,59 @@
     "confidence": "definite",
     "userSentence": "Installed macOS driver and network system extensions.",
     "whatRegenerates": null,
+    "regenerationCost": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.project.databases",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "Database files in a project working tree; these may contain real local data.",
+    "whatRegenerates": null,
+    "regenerationCost": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.project.environment_files",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "Environment files that may contain real credentials, endpoints, or project configuration.",
+    "whatRegenerates": null,
+    "regenerationCost": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.project.ide_settings",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "IDE project settings and workspace configuration.",
+    "whatRegenerates": null,
+    "regenerationCost": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.project.lockfiles",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "Dependency lockfiles that pin project state and must not be removed as build output.",
+    "whatRegenerates": null,
+    "regenerationCost": null,
     "recoverability": {
       "kind": "irrecoverable"
     }
@@ -223,6 +332,20 @@
     "confidence": "definite",
     "userSentence": "Git object database, commit history, branch refs, and HEAD pointer.",
     "whatRegenerates": null,
+    "regenerationCost": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "protected.source_control.git_working_tree",
+    "version": 1,
+    "owningTool": "macOS Security Architecture",
+    "resultingClass": "protected",
+    "confidence": "definite",
+    "userSentence": "Source code and project state in a Git working tree; only an explicitly recognized generated output is evaluated separately.",
+    "whatRegenerates": null,
+    "regenerationCost": null,
     "recoverability": {
       "kind": "irrecoverable"
     }
@@ -235,6 +358,7 @@
     "confidence": "definite",
     "userSentence": "Sealed core macOS operating system components and binaries.",
     "whatRegenerates": null,
+    "regenerationCost": null,
     "recoverability": {
       "kind": "irrecoverable"
     }
@@ -247,6 +371,7 @@
     "confidence": "definite",
     "userSentence": "Platform secure enclave and hardware support data.",
     "whatRegenerates": null,
+    "regenerationCost": null,
     "recoverability": {
       "kind": "irrecoverable"
     }
@@ -259,6 +384,7 @@
     "confidence": "definite",
     "userSentence": "Apple Silicon secondary boot and recovery descriptors.",
     "whatRegenerates": null,
+    "regenerationCost": null,
     "recoverability": {
       "kind": "irrecoverable"
     }
@@ -271,6 +397,7 @@
     "confidence": "definite",
     "userSentence": "Firmware boot assets and bootloader payloads.",
     "whatRegenerates": null,
+    "regenerationCost": null,
     "recoverability": {
       "kind": "irrecoverable"
     }
@@ -283,6 +410,7 @@
     "confidence": "definite",
     "userSentence": "Recovery operating system and diagnostic tools.",
     "whatRegenerates": null,
+    "regenerationCost": null,
     "recoverability": {
       "kind": "irrecoverable"
     }
@@ -295,6 +423,7 @@
     "confidence": "definite",
     "userSentence": "Read-only root filesystem sealed by APFS snapshot integrity verification.",
     "whatRegenerates": null,
+    "regenerationCost": null,
     "recoverability": {
       "kind": "irrecoverable"
     }
@@ -307,6 +436,7 @@
     "confidence": "definite",
     "userSentence": "Operating system staging volume for system updates.",
     "whatRegenerates": null,
+    "regenerationCost": null,
     "recoverability": {
       "kind": "irrecoverable"
     }
@@ -319,6 +449,7 @@
     "confidence": "definite",
     "userSentence": "macOS system swap and encrypted paging files.",
     "whatRegenerates": null,
+    "regenerationCost": null,
     "recoverability": {
       "kind": "irrecoverable"
     }
@@ -331,6 +462,7 @@
     "confidence": "definite",
     "userSentence": "Secure Enclave cross-architecture runtime storage.",
     "whatRegenerates": null,
+    "regenerationCost": null,
     "recoverability": {
       "kind": "irrecoverable"
     }
@@ -343,6 +475,7 @@
     "confidence": "definite",
     "userSentence": "APFS local snapshots created for Time Machine incremental recovery.",
     "whatRegenerates": null,
+    "regenerationCost": null,
     "recoverability": {
       "kind": "irrecoverable"
     }
@@ -355,6 +488,7 @@
     "confidence": "definite",
     "userSentence": "Mounted Time Machine volume backup chains and catalogs.",
     "whatRegenerates": null,
+    "regenerationCost": null,
     "recoverability": {
       "kind": "irrecoverable"
     }
@@ -367,6 +501,7 @@
     "confidence": "definite",
     "userSentence": "AWS cloud access keys, session tokens, and account configuration.",
     "whatRegenerates": null,
+    "regenerationCost": null,
     "recoverability": {
       "kind": "irrecoverable"
     }
@@ -379,6 +514,7 @@
     "confidence": "definite",
     "userSentence": "Microsoft Azure authentication tokens and service principal profiles.",
     "whatRegenerates": null,
+    "regenerationCost": null,
     "recoverability": {
       "kind": "irrecoverable"
     }
@@ -391,6 +527,7 @@
     "confidence": "definite",
     "userSentence": "Crates.io and private registry publishing tokens.",
     "whatRegenerates": null,
+    "regenerationCost": null,
     "recoverability": {
       "kind": "irrecoverable"
     }
@@ -403,6 +540,7 @@
     "confidence": "definite",
     "userSentence": "Container registry authentication tokens and credentials.",
     "whatRegenerates": null,
+    "regenerationCost": null,
     "recoverability": {
       "kind": "irrecoverable"
     }
@@ -415,6 +553,7 @@
     "confidence": "definite",
     "userSentence": "Google Cloud SDK application default credentials and authentication tokens.",
     "whatRegenerates": null,
+    "regenerationCost": null,
     "recoverability": {
       "kind": "irrecoverable"
     }
@@ -427,6 +566,7 @@
     "confidence": "definite",
     "userSentence": "Cached passwords and personal access tokens for remote repositories.",
     "whatRegenerates": null,
+    "regenerationCost": null,
     "recoverability": {
       "kind": "irrecoverable"
     }
@@ -439,6 +579,7 @@
     "confidence": "definite",
     "userSentence": "Encrypted passwords, secrets, private keys, and application credentials.",
     "whatRegenerates": null,
+    "regenerationCost": null,
     "recoverability": {
       "kind": "irrecoverable"
     }
@@ -451,6 +592,7 @@
     "confidence": "definite",
     "userSentence": "Cluster configuration, client certificates, and bearer tokens.",
     "whatRegenerates": null,
+    "regenerationCost": null,
     "recoverability": {
       "kind": "irrecoverable"
     }
@@ -463,6 +605,7 @@
     "confidence": "definite",
     "userSentence": "Plaintext network login credentials and machine authentication records.",
     "whatRegenerates": null,
+    "regenerationCost": null,
     "recoverability": {
       "kind": "irrecoverable"
     }
@@ -475,6 +618,7 @@
     "confidence": "definite",
     "userSentence": "Package registry access tokens and private registry credentials.",
     "whatRegenerates": null,
+    "regenerationCost": null,
     "recoverability": {
       "kind": "irrecoverable"
     }
@@ -487,10 +631,27 @@
     "confidence": "definite",
     "userSentence": "Rust build artifacts generated by Cargo compilation.",
     "whatRegenerates": "cargo build",
+    "regenerationCost": "minutes to hours, depending on dependencies",
     "recoverability": {
       "kind": "rebuildableByTool",
       "details": {
         "command": "cargo build"
+      }
+    }
+  },
+  {
+    "id": "rule.rebuildable.docker_buildx_cache",
+    "version": 1,
+    "owningTool": "Docker Buildx",
+    "resultingClass": "rebuildable",
+    "confidence": "definite",
+    "userSentence": "Docker Buildx builder state and build cache data.",
+    "whatRegenerates": "docker buildx build",
+    "regenerationCost": "minutes to hours, plus base-image downloads",
+    "recoverability": {
+      "kind": "rebuildableByTool",
+      "details": {
+        "command": "docker buildx build"
       }
     }
   },
@@ -502,6 +663,7 @@
     "confidence": "definite",
     "userSentence": "Intermediate compilation outputs cached by the Go toolchain.",
     "whatRegenerates": "go build",
+    "regenerationCost": "seconds to minutes, plus module downloads",
     "recoverability": {
       "kind": "rebuildableByTool",
       "details": {
@@ -517,6 +679,7 @@
     "confidence": "definite",
     "userSentence": "Compiled dependency artifacts and wrapper jars cached by Gradle.",
     "whatRegenerates": "gradle build",
+    "regenerationCost": "minutes to hours, plus dependency downloads",
     "recoverability": {
       "kind": "rebuildableByTool",
       "details": {
@@ -532,10 +695,27 @@
     "confidence": "definite",
     "userSentence": "Downloaded bottle archives and source tarballs cached by Homebrew.",
     "whatRegenerates": "brew fetch",
+    "regenerationCost": "minutes, plus network downloads",
     "recoverability": {
       "kind": "rebuildableByTool",
       "details": {
         "command": "brew fetch"
+      }
+    }
+  },
+  {
+    "id": "rule.rebuildable.ios_simulator_runtimes",
+    "version": 1,
+    "owningTool": "Xcode",
+    "resultingClass": "rebuildable",
+    "confidence": "definite",
+    "userSentence": "Downloaded iOS Simulator runtimes managed by Xcode.",
+    "whatRegenerates": "xcodebuild -downloadPlatform iOS",
+    "regenerationCost": "multi-gigabyte download; often tens of minutes",
+    "recoverability": {
+      "kind": "rebuildableByTool",
+      "details": {
+        "command": "xcodebuild -downloadPlatform iOS"
       }
     }
   },
@@ -547,10 +727,91 @@
     "confidence": "definite",
     "userSentence": "Downloaded package tarballs and metadata cached by npm.",
     "whatRegenerates": "npm install",
+    "regenerationCost": "minutes, plus package downloads",
     "recoverability": {
       "kind": "rebuildableByTool",
       "details": {
         "command": "npm install"
+      }
+    }
+  },
+  {
+    "id": "rule.rebuildable.pip_cache",
+    "version": 1,
+    "owningTool": "pip",
+    "resultingClass": "rebuildable",
+    "confidence": "definite",
+    "userSentence": "Downloaded Python wheels and source archives cached by pip.",
+    "whatRegenerates": "pip install",
+    "regenerationCost": "minutes, plus package downloads",
+    "recoverability": {
+      "kind": "rebuildableByTool",
+      "details": {
+        "command": "pip install"
+      }
+    }
+  },
+  {
+    "id": "rule.rebuildable.pnpm_store",
+    "version": 1,
+    "owningTool": "pnpm",
+    "resultingClass": "rebuildable",
+    "confidence": "definite",
+    "userSentence": "The pnpm content-addressable package store.",
+    "whatRegenerates": "pnpm install",
+    "regenerationCost": "minutes, plus package downloads",
+    "recoverability": {
+      "kind": "rebuildableByTool",
+      "details": {
+        "command": "pnpm install"
+      }
+    }
+  },
+  {
+    "id": "rule.rebuildable.podman_image_cache",
+    "version": 1,
+    "owningTool": "Podman",
+    "resultingClass": "rebuildable",
+    "confidence": "definite",
+    "userSentence": "Podman image and layer cache outside its protected volume store.",
+    "whatRegenerates": "podman pull or podman build",
+    "regenerationCost": "minutes to hours, plus image downloads",
+    "recoverability": {
+      "kind": "rebuildableByTool",
+      "details": {
+        "command": "podman pull or podman build"
+      }
+    }
+  },
+  {
+    "id": "rule.rebuildable.project_build_output",
+    "version": 1,
+    "owningTool": "Project build tool",
+    "resultingClass": "rebuildable",
+    "confidence": "definite",
+    "userSentence": "Generated output from a project build in a conventional output directory.",
+    "whatRegenerates": "project build command",
+    "regenerationCost": "seconds to hours, depending on the project",
+    "recoverability": {
+      "kind": "rebuildableByTool",
+      "details": {
+        "command": "project build command"
+      }
+    }
+  },
+  {
+    "id": "rule.rebuildable.uv_cache",
+    "version": 1,
+    "owningTool": "uv",
+    "resultingClass": "rebuildable",
+    "confidence": "definite",
+    "userSentence": "Downloaded Python packages and build artifacts cached by uv.",
+    "whatRegenerates": "uv sync",
+    "regenerationCost": "minutes, plus package downloads",
+    "recoverability": {
+      "kind": "rebuildableByTool",
+      "details": {
+        "command": "uv sync"
       }
     }
   },
@@ -562,11 +823,41 @@
     "confidence": "definite",
     "userSentence": "Intermediate build products, module caches, and symbol indexes generated by Xcode.",
     "whatRegenerates": "xcodebuild",
+    "regenerationCost": "minutes to hours, plus dependency downloads",
     "recoverability": {
       "kind": "rebuildableByTool",
       "details": {
         "command": "xcodebuild"
       }
+    }
+  },
+  {
+    "id": "rule.rebuildable.yarn_cache",
+    "version": 1,
+    "owningTool": "Yarn",
+    "resultingClass": "rebuildable",
+    "confidence": "definite",
+    "userSentence": "Downloaded package archives cached by Yarn.",
+    "whatRegenerates": "yarn install",
+    "regenerationCost": "minutes, plus package downloads",
+    "recoverability": {
+      "kind": "rebuildableByTool",
+      "details": {
+        "command": "yarn install"
+      }
+    }
+  },
+  {
+    "id": "rule.review.container_images",
+    "version": 1,
+    "owningTool": "Docker Desktop",
+    "resultingClass": "review",
+    "confidence": "likely",
+    "userSentence": "Docker Desktop VM storage can contain images and runtime data; inspect individual entries.",
+    "whatRegenerates": null,
+    "regenerationCost": null,
+    "recoverability": {
+      "kind": "irrecoverable"
     }
   },
   {
@@ -577,6 +868,7 @@
     "confidence": "definite",
     "userSentence": "User downloaded files requiring personal inspection before removal.",
     "whatRegenerates": null,
+    "regenerationCost": null,
     "recoverability": {
       "kind": "trashRecoverable"
     }
@@ -589,6 +881,7 @@
     "confidence": "definite",
     "userSentence": "Durable machine learning model weights requiring explicit user review before cleanup.",
     "whatRegenerates": null,
+    "regenerationCost": null,
     "recoverability": {
       "kind": "irrecoverable"
     }
@@ -601,11 +894,25 @@
     "confidence": "definite",
     "userSentence": "Files inside a Git working tree requiring manual verification against local modifications.",
     "whatRegenerates": null,
+    "regenerationCost": null,
     "recoverability": {
       "kind": "sourceControlled",
       "details": {
         "remote": null
       }
+    }
+  },
+  {
+    "id": "rule.review.ios_simulator_devices",
+    "version": 1,
+    "owningTool": "Xcode",
+    "resultingClass": "review",
+    "confidence": "definite",
+    "userSentence": "Simulator devices can contain app data and state; inspect before removal.",
+    "whatRegenerates": "xcrun simctl create",
+    "regenerationCost": "minutes, but device state and app data are not recreated",
+    "recoverability": {
+      "kind": "irrecoverable"
     }
   },
   {
@@ -616,6 +923,33 @@
     "confidence": "definite",
     "userSentence": "Filesystem crossing a device or mount boundary requiring explicit review.",
     "whatRegenerates": null,
+    "regenerationCost": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "rule.review.xcode_archives",
+    "version": 1,
+    "owningTool": "Xcode",
+    "resultingClass": "review",
+    "confidence": "definite",
+    "userSentence": "Xcode archives may contain distributable apps, symbols, and diagnostics.",
+    "whatRegenerates": null,
+    "regenerationCost": null,
+    "recoverability": {
+      "kind": "irrecoverable"
+    }
+  },
+  {
+    "id": "rule.review.xcode_device_support",
+    "version": 1,
+    "owningTool": "Xcode",
+    "resultingClass": "review",
+    "confidence": "definite",
+    "userSentence": "Xcode device support files are tied to debugging a physical device and may need download.",
+    "whatRegenerates": null,
+    "regenerationCost": null,
     "recoverability": {
       "kind": "irrecoverable"
     }

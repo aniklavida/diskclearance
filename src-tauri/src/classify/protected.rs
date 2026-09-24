@@ -14,6 +14,27 @@ pub struct ProtectedReason {
     pub description: String,
 }
 
+fn is_lockfile_name(name: &str) -> bool {
+    matches!(
+        name,
+        "Cargo.lock"
+            | "Gemfile.lock"
+            | "Package.resolved"
+            | "Podfile.lock"
+            | "composer.lock"
+            | "flake.lock"
+            | "go.sum"
+            | "mix.lock"
+            | "package-lock.json"
+            | "pnpm-lock.yaml"
+            | "poetry.lock"
+            | "Pipfile.lock"
+            | "pubspec.lock"
+            | "uv.lock"
+            | "yarn.lock"
+    )
+}
+
 /// Category of protected path in the macOS operating environment.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
@@ -24,6 +45,10 @@ pub enum ProtectedCategory {
     CredentialStore,
     CryptoMaterial,
     SourceControl,
+    ProjectEnvironment,
+    ProjectConfiguration,
+    ProjectDatabase,
+    ContainerVolume,
     CloudSync,
     TimeMachineSnapshot,
     DurableAppState,
@@ -96,8 +121,51 @@ impl ProtectedRootDescriptor {
             }
         }
 
-        // 5. Check special categories (e.g. source control)
-        if self.category == ProtectedCategory::SourceControl && ctx.is_git_internal {
+        if matches!(self.category, ProtectedCategory::SourceControl) && ctx.is_git_internal {
+            return true;
+        }
+
+        if self.category == ProtectedCategory::SourceControl
+            && ctx.inside_git_repo
+            && !ctx.is_git_internal
+        {
+            return true;
+        }
+
+        let file_name = ctx
+            .canonical_path
+            .file_name()
+            .and_then(|name| name.to_str());
+        if self.category == ProtectedCategory::ProjectEnvironment
+            && file_name.is_some_and(|name| name == ".env" || name.starts_with(".env."))
+        {
+            return true;
+        }
+
+        if self.category == ProtectedCategory::ProjectConfiguration
+            && file_name.is_some_and(is_lockfile_name)
+        {
+            return true;
+        }
+
+        if self.category == ProtectedCategory::ProjectConfiguration
+            && ctx.canonical_path.components().any(|component| {
+                component.as_os_str() == std::ffi::OsStr::new(".idea")
+                    || component.as_os_str() == std::ffi::OsStr::new(".vscode")
+            })
+        {
+            return true;
+        }
+
+        if self.category == ProtectedCategory::ProjectDatabase
+            && ctx.inside_git_repo
+            && file_name.is_some_and(|name| {
+                let lower = name.to_ascii_lowercase();
+                [".db", ".sqlite", ".sqlite3"]
+                    .iter()
+                    .any(|extension| lower.ends_with(extension))
+            })
+        {
             return true;
         }
 
@@ -549,6 +617,86 @@ pub const PROTECTED_ROOTS: &[ProtectedRootDescriptor] = &[
         exact_system_path: None,
         system_prefix: None,
         home_relative_prefix: Some("Library/Messages"),
+        home_relative_exact: None,
+    },
+    ProtectedRootDescriptor {
+        id: "protected.source_control.git_working_tree",
+        name: "Git Working Tree",
+        category: ProtectedCategory::SourceControl,
+        description: "Source code and project state in a Git working tree; only an explicitly recognized generated output is evaluated separately.",
+        exact_system_path: None,
+        system_prefix: None,
+        home_relative_prefix: None,
+        home_relative_exact: None,
+    },
+    ProtectedRootDescriptor {
+        id: "protected.project.environment_files",
+        name: "Project Environment Files",
+        category: ProtectedCategory::ProjectEnvironment,
+        description: "Environment files that may contain real credentials, endpoints, or project configuration.",
+        exact_system_path: None,
+        system_prefix: None,
+        home_relative_prefix: None,
+        home_relative_exact: None,
+    },
+    ProtectedRootDescriptor {
+        id: "protected.project.lockfiles",
+        name: "Package Manager Lockfiles",
+        category: ProtectedCategory::ProjectConfiguration,
+        description: "Dependency lockfiles that pin project state and must not be removed as build output.",
+        exact_system_path: None,
+        system_prefix: None,
+        home_relative_prefix: None,
+        home_relative_exact: None,
+    },
+    ProtectedRootDescriptor {
+        id: "protected.project.ide_settings",
+        name: "IDE Project Settings",
+        category: ProtectedCategory::ProjectConfiguration,
+        description: "IDE project settings and workspace configuration.",
+        exact_system_path: None,
+        system_prefix: None,
+        home_relative_prefix: None,
+        home_relative_exact: None,
+    },
+    ProtectedRootDescriptor {
+        id: "protected.project.databases",
+        name: "Project Database Files",
+        category: ProtectedCategory::ProjectDatabase,
+        description: "Database files in a project working tree; these may contain real local data.",
+        exact_system_path: None,
+        system_prefix: None,
+        home_relative_prefix: None,
+        home_relative_exact: None,
+    },
+    ProtectedRootDescriptor {
+        id: "protected.containers.docker_volumes",
+        name: "Docker Volumes",
+        category: ProtectedCategory::ContainerVolume,
+        description: "Container volumes may hold real local databases and user data; they are not build caches.",
+        exact_system_path: None,
+        system_prefix: None,
+        home_relative_prefix: Some(".docker/volumes"),
+        home_relative_exact: None,
+    },
+    ProtectedRootDescriptor {
+        id: "protected.containers.podman_volumes",
+        name: "Podman Volumes",
+        category: ProtectedCategory::ContainerVolume,
+        description: "Podman volumes may hold real local databases and user data; they are not image caches.",
+        exact_system_path: None,
+        system_prefix: None,
+        home_relative_prefix: Some(".local/share/containers/storage/volumes"),
+        home_relative_exact: None,
+    },
+    ProtectedRootDescriptor {
+        id: "protected.containers.docker_desktop_volumes",
+        name: "Docker Desktop Volume Data",
+        category: ProtectedCategory::ContainerVolume,
+        description: "Volume data inside Docker Desktop VM storage; inspect only as an individual container volume.",
+        exact_system_path: None,
+        system_prefix: None,
+        home_relative_prefix: Some("Library/Containers/com.docker.docker/Data/vms/0/data/volumes"),
         home_relative_exact: None,
     },
 ];

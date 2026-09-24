@@ -403,6 +403,7 @@ mod tests {
             matched_reason: "Matches Cargo target directory".to_string(),
             regenerator: Some("cargo build".to_string()),
             last_activity_ms: Some(100),
+            regeneration_cost: Some("minutes to hours".to_string()),
             recoverability: Recoverability::RebuildableByTool {
                 command: "cargo build".to_string(),
             },
@@ -440,6 +441,7 @@ mod tests {
             matched_reason: "Root system volume".to_string(),
             regenerator: None,
             last_activity_ms: None,
+            regeneration_cost: None,
             recoverability: Recoverability::Irrecoverable,
             confidence: Confidence::Definite,
         };
@@ -477,6 +479,7 @@ mod tests {
             matched_reason: "Cargo build".to_string(),
             regenerator: Some("cargo build".to_string()),
             last_activity_ms: None,
+            regeneration_cost: Some("minutes to hours".to_string()),
             recoverability: Recoverability::RebuildableByTool {
                 command: "cargo build".to_string(),
             },
