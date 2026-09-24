@@ -77,4 +77,7 @@ only way to take the fix.
   the Linux/GTK stack, `proc-macro-error` via an older macro crate). No fixed
   version is available within the current dependency ranges. The cargo audit job
   will fail if a vulnerability, rather than an unmaintained or unsound warning,
-  appears.
+  appears. GitHub's advisory feed rates the `glib` entry as a medium
+  vulnerability; `glib` is reachable only through Tauri's Linux/GTK stack, and
+  Linux is not a supported platform for v1.0, but it remains in the lockfile
+  because Cargo resolves dependencies for every target.
