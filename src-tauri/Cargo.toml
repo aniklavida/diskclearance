@@ -25,6 +25,7 @@ serde = { version = "1", features = ["derive"] }
 rusqlite = { version = "0.37", features = ["bundled"] }
 ts-rs = "12.0.1"
 serde_json = "1"
+sha2 = "0.10.8"
 
 
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration

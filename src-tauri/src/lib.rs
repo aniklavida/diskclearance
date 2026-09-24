@@ -1,5 +1,6 @@
 pub mod boundary;
 pub mod classify;
+pub mod duplicates;
 pub mod foundation;
 pub mod platform;
 pub mod scan;
@@ -39,6 +40,7 @@ pub fn run() {
             boundary::read::fetch_folder_aggregate,
             boundary::read::fetch_application_inventory,
             boundary::read::fetch_storage_reclamation_report,
+            boundary::read::detect_exact_duplicates,
             boundary::plan::build_plan,
             boundary::plan::fetch_plan,
             boundary::plan::revalidate_plan,
