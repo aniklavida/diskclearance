@@ -33,6 +33,7 @@ fn make_dummy_evidence(rule_id: &str) -> Evidence {
         matched_reason: "Destructive safety test assertion".to_string(),
         regenerator: None,
         last_activity_ms: None,
+        regeneration_cost: None,
         recoverability: Recoverability::Irrecoverable,
         confidence: Confidence::Definite,
     }

@@ -84,6 +84,8 @@ pub enum RuleMatcher {
     SymlinkPointingToProtected,
     /// Matches durable local AI model storage directories.
     DurableModelStorage,
+    /// Matches conventional project build output directories.
+    BuildOutput,
     /// Composite matcher requiring all inner matchers to match.
     All(Vec<RuleMatcher>),
     /// Composite matcher requiring at least one inner matcher to match.
@@ -223,6 +225,28 @@ impl RuleMatcher {
                     } else {
                         MatchResult::no_match()
                     }
+                } else {
+                    MatchResult::no_match()
+                }
+            }
+            Self::BuildOutput => {
+                let matches = ctx.entry_type == EntryType::Directory
+                    && ctx
+                        .canonical_path
+                        .file_name()
+                        .and_then(|name| name.to_str())
+                        .is_some_and(|name| {
+                            ["target", "build", "dist", "out", ".next"].contains(&name)
+                        });
+                if matches {
+                    MatchResult::matched(
+                        "Conventional project build output directory",
+                        Confidence::Definite,
+                        None,
+                        Recoverability::RebuildableByTool {
+                            command: "project build command".to_string(),
+                        },
+                    )
                 } else {
                     MatchResult::no_match()
                 }

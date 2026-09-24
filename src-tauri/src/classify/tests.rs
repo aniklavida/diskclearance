@@ -331,11 +331,21 @@ fn test_every_protected_root_unrepresentable_as_plan_item() {
         } else if let Some(rel) = root.home_relative_exact {
             adapter.home.join(rel)
         } else {
-            // Source control internal
-            adapter.home.join("project/.git/HEAD")
+            match root.id {
+                "protected.project.environment_files" => adapter.home.join(".env"),
+                "protected.project.lockfiles" => adapter.home.join("Cargo.lock"),
+                "protected.project.ide_settings" => {
+                    adapter.home.join("project/.idea/workspace.xml")
+                }
+                "protected.project.databases" => adapter.home.join("project/app.sqlite"),
+                _ => adapter.home.join("project/.git/HEAD"),
+            }
         };
 
         let is_git_internal = root.id == "protected.source_control.git_internal";
+        let inside_git_repo = is_git_internal
+            || root.id == "protected.source_control.git_working_tree"
+            || root.id == "protected.project.databases";
         let ctx = adapter.make_context(
             &path,
             &path,
@@ -347,7 +357,7 @@ fn test_every_protected_root_unrepresentable_as_plan_item() {
             false,
             None,
             false,
-            is_git_internal,
+            inside_git_repo,
             is_git_internal,
         );
 
@@ -473,6 +483,7 @@ fn test_every_finding_carries_rule_and_non_empty_evidence() {
         matched_reason: "Reason".to_string(),
         regenerator: None,
         last_activity_ms: None,
+        regeneration_cost: None,
         recoverability: Recoverability::TrashRecoverable,
         confidence: Confidence::Definite,
     };
@@ -563,15 +574,10 @@ fn test_symlink_from_rebuildable_cache_into_source_tree() {
     );
 
     let classified = catalogue.classify(&ctx);
-    assert_ne!(
-        classified.safety_class,
-        SafetyClass::Rebuildable,
-        "Symlink into a source tree must never be classified as Rebuildable"
-    );
     assert_eq!(
         classified.safety_class,
-        SafetyClass::Review,
-        "Symlink into a source tree must be classified as Review"
+        SafetyClass::Protected,
+        "Symlink into a source-controlled working tree must be Protected"
     );
 }
 
@@ -606,6 +612,7 @@ fn test_path_replaced_between_classification_and_reread() {
             matched_reason: "Matches Cargo cache".to_string(),
             regenerator: Some("cargo build".to_string()),
             last_activity_ms: None,
+            regeneration_cost: Some("minutes to hours".to_string()),
             recoverability: Recoverability::RebuildableByTool {
                 command: "cargo build".to_string(),
             },
@@ -701,12 +708,12 @@ fn test_cache_directory_sitting_inside_git_working_tree() {
     let classified_working_tree = catalogue.classify(&ctx_working_tree);
     assert_eq!(
         classified_working_tree.safety_class,
-        SafetyClass::Review,
-        "A cache sitting inside a .git working tree must be classified as Review"
+        SafetyClass::Protected,
+        "A source-controlled working tree must be Protected"
     );
     assert!(
         !classified_working_tree.safety_class.is_default_selected(),
-        "A cache sitting inside a .git working tree must never be selected by default"
+        "A source-controlled working tree must never be selected by default"
     );
 }
 
@@ -853,6 +860,239 @@ fn test_durable_model_store_must_not_be_classed_rebuildable() {
     }
 }
 
+#[test]
+fn test_build_output_inside_real_git_repo_is_separate_from_protected_repo() {
+    let catalogue = RuleCatalogue::new();
+    let adapter = ClassificationTestAdapter::new("real-git-build-output");
+    let repo = adapter.fixture.create_dir("user_home/projects/app");
+    let status = std::process::Command::new("git")
+        .args(["init", repo.to_str().expect("valid repo path")])
+        .current_dir(&adapter.fixture.root)
+        .output()
+        .expect("git init");
+    assert!(status.status.success());
+
+    let build_output = adapter.fixture.create_dir("user_home/projects/app/build");
+    let build_ctx = adapter.make_context(
+        &build_output,
+        &build_output,
+        FileIdentity {
+            device_id: 1,
+            inode: 701,
+        },
+        EntryType::Directory,
+        false,
+        None,
+        false,
+        true,
+        false,
+    );
+    let build_finding = catalogue.classify(&build_ctx);
+    assert_eq!(build_finding.safety_class, SafetyClass::Rebuildable);
+    assert_eq!(
+        build_finding.evidence.regenerator.as_deref(),
+        Some("project build command")
+    );
+    assert!(build_finding.evidence.regeneration_cost.is_some());
+
+    let repo_ctx = adapter.make_context(
+        &repo,
+        &repo,
+        FileIdentity {
+            device_id: 1,
+            inode: 702,
+        },
+        EntryType::Directory,
+        false,
+        None,
+        false,
+        true,
+        false,
+    );
+    assert_eq!(
+        catalogue.classify(&repo_ctx).safety_class,
+        SafetyClass::Protected
+    );
+}
+
+#[test]
+fn test_container_volume_and_build_cache_have_different_classes() {
+    let catalogue = RuleCatalogue::new();
+    let adapter = ClassificationTestAdapter::new("container-volume-cache");
+    let volume = adapter
+        .fixture
+        .create_dir("user_home/.docker/volumes/app-data");
+    let build_cache = adapter
+        .fixture
+        .create_dir("user_home/.docker/buildx/activity");
+
+    let volume_ctx = adapter.make_context(
+        &volume,
+        &volume,
+        FileIdentity {
+            device_id: 1,
+            inode: 711,
+        },
+        EntryType::Directory,
+        false,
+        None,
+        false,
+        false,
+        false,
+    );
+    let cache_ctx = adapter.make_context(
+        &build_cache,
+        &build_cache,
+        FileIdentity {
+            device_id: 1,
+            inode: 712,
+        },
+        EntryType::Directory,
+        false,
+        None,
+        false,
+        false,
+        false,
+    );
+
+    assert_eq!(
+        catalogue.classify(&volume_ctx).safety_class,
+        SafetyClass::Protected
+    );
+    assert_eq!(
+        catalogue.classify(&cache_ctx).safety_class,
+        SafetyClass::Rebuildable
+    );
+}
+
+#[test]
+fn test_local_model_store_is_review_with_size_and_no_recovery_note() {
+    let catalogue = RuleCatalogue::new();
+    let adapter = ClassificationTestAdapter::new("model-store-size");
+    let model = adapter
+        .fixture
+        .create_file("user_home/.ollama/models/llama.gguf", b"weights");
+    let mut ctx = adapter.make_context(
+        &model,
+        &model,
+        FileIdentity {
+            device_id: 1,
+            inode: 721,
+        },
+        EntryType::File,
+        false,
+        None,
+        false,
+        false,
+        false,
+    );
+    ctx.apparent_size = 12 * 1024 * 1024 * 1024;
+    let finding = catalogue.classify(&ctx);
+
+    assert_eq!(finding.safety_class, SafetyClass::Review);
+    assert!(!finding.safety_class.is_default_selected());
+    assert_eq!(finding.size_bytes, 12 * 1024 * 1024 * 1024);
+    assert!(finding.evidence.matched_reason.contains("12 GB"));
+    assert!(
+        finding
+            .evidence
+            .matched_reason
+            .contains("Re-downloading is the only way to get it back")
+    );
+    assert_eq!(
+        finding.evidence.recoverability,
+        Recoverability::Irrecoverable
+    );
+}
+
+#[test]
+fn test_environment_file_and_lockfile_are_protected() {
+    let catalogue = RuleCatalogue::new();
+    let adapter = ClassificationTestAdapter::new("project-protected-files");
+    let repo = adapter.fixture.create_dir("user_home/projects/service");
+    let env_file = adapter.fixture.create_file(
+        "user_home/projects/service/.env",
+        b"DATABASE_URL=postgres://real:secret@example.invalid/app\nAPI_TOKEN=real-looking-token",
+    );
+    let lockfile = adapter
+        .fixture
+        .create_file("user_home/projects/service/Cargo.lock", b"version = 4\n");
+
+    for path in [env_file, lockfile] {
+        let ctx = adapter.make_context(
+            &path,
+            &path,
+            FileIdentity {
+                device_id: 1,
+                inode: 731,
+            },
+            EntryType::File,
+            false,
+            None,
+            false,
+            true,
+            false,
+        );
+        assert_eq!(
+            catalogue.classify(&ctx).safety_class,
+            SafetyClass::Protected
+        );
+    }
+    assert!(repo.exists());
+}
+
+#[test]
+fn test_rebuildable_rules_always_state_regeneration_path_and_cost() {
+    for descriptor in RuleCatalogue::new().all_descriptors() {
+        if descriptor.resulting_class == SafetyClass::Rebuildable {
+            assert!(
+                descriptor
+                    .what_regenerates
+                    .as_deref()
+                    .is_some_and(|value| !value.trim().is_empty())
+            );
+            assert!(
+                descriptor
+                    .regeneration_cost
+                    .as_deref()
+                    .is_some_and(|value| !value.trim().is_empty())
+            );
+        }
+    }
+}
+
+#[test]
+fn test_findings_report_last_activity_time() {
+    let catalogue = RuleCatalogue::new();
+    let adapter = ClassificationTestAdapter::new("last-activity");
+    let paths = [
+        adapter.home.join(".cargo/registry/cache"),
+        adapter.home.join("Library/Developer/Xcode/DerivedData"),
+        adapter.home.join(".npm/_cacache"),
+        adapter.caches.join("pip"),
+        adapter.home.join(".docker/buildx"),
+        adapter.home.join("projects/app/build"),
+    ];
+
+    for (index, path) in paths.iter().enumerate() {
+        let ctx = adapter.make_context(
+            path,
+            path,
+            FileIdentity {
+                device_id: 1,
+                inode: 741 + index as u64,
+            },
+            EntryType::Directory,
+            false,
+            None,
+            false,
+            false,
+            false,
+        );
+        assert!(catalogue.classify(&ctx).evidence.last_activity_ms.is_some());
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Rule Catalogue Snapshot Test
 // ---------------------------------------------------------------------------
@@ -911,6 +1151,7 @@ fn test_rule_version_change_triggers_revalidation_failure() {
             matched_reason: "Matches Cargo cache".to_string(),
             regenerator: Some("cargo build".to_string()),
             last_activity_ms: None,
+            regeneration_cost: Some("minutes to hours".to_string()),
             recoverability: Recoverability::RebuildableByTool {
                 command: "cargo build".to_string(),
             },

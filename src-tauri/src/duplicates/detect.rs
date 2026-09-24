@@ -79,7 +79,7 @@ pub fn is_excluded_path(path: &Path, adapter: &dyn PlatformAdapter) -> bool {
         app_support_dir: app_support.as_deref(),
         caches_dir: caches.as_deref(),
         crosses_mount_boundary: false,
-        inside_git_repo: true, // We already checked above; but set to ensure any git matcher triggers
+        inside_git_repo: false,
         is_git_internal: false,
     };
 
