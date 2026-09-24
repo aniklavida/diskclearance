@@ -154,16 +154,7 @@ fn test_hardlinked_pair_reported_as_sharing_storage_with_zero_reclaimable_bytes(
 // -----------------------------------------------------------------------------
 #[test]
 fn test_apfs_clone_pair_reported_as_sharing_storage_with_zero_reclaimable_bytes() {
-    #[cfg(target_os = "macos")]
     {
-        unsafe extern "C" {
-            fn clonefile(
-                src: *const std::ffi::c_char,
-                dst: *const std::ffi::c_char,
-                flags: u32,
-            ) -> std::ffi::c_int;
-        }
-
         let fixture = TempTestDir::new("apfs_clone");
         let adapter = crate::platform::create_platform_adapter();
 
@@ -172,13 +163,9 @@ fn test_apfs_clone_pair_reported_as_sharing_storage_with_zero_reclaimable_bytes(
         let file_orig = fixture.file("source.bin", &content);
         let file_clone = fixture.path.join("clone.bin");
 
-        let src_c = std::ffi::CString::new(file_orig.to_str().unwrap()).unwrap();
-        let dst_c = std::ffi::CString::new(file_clone.to_str().unwrap()).unwrap();
-
-        let ret = unsafe { clonefile(src_c.as_ptr(), dst_c.as_ptr(), 0) };
-        if ret != 0 {
-            // Volume does not support clonefile (e.g. non-APFS temp directory)
-            eprintln!("Skipping APFS clonefile test: clonefile returned {}", ret);
+        if !crate::platform::try_create_clone_for_test(&file_orig, &file_clone) {
+            // Unsupported on this platform/volume (e.g. non-APFS temp directory)
+            eprintln!("Skipping APFS clone test: clone creation not supported here");
             return;
         }
 

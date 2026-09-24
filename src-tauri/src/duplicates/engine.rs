@@ -250,7 +250,7 @@ pub fn detect_duplicates<P: AsRef<Path>>(
                 let mut shared_storage_items = Vec::new();
 
                 for (idx, copy) in confirmed_files.into_iter().enumerate() {
-                    let sharing_kind = detect_storage_sharing(&copy, &retained_cand);
+                    let sharing_kind = detect_storage_sharing(&copy, &retained_cand, adapter);
                     let item = DuplicateItem::new(
                         format!("dup-{}-copy-{}", group_counter, idx + 1),
                         copy.path,

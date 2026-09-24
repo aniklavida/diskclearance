@@ -86,60 +86,19 @@ pub fn is_excluded_path(path: &Path, adapter: &dyn PlatformAdapter) -> bool {
     evaluate_protected_roots(&match_ctx).is_some()
 }
 
-/// Queries the physical device extent offset on macOS using the F_LOG2PHYS_EXT fcntl.
-///
-/// Returns `Some(device_offset)` if the file is backed by physical storage blocks,
-/// or `None` if unsupported, zero-sized, or an error occurs.
-#[cfg(target_os = "macos")]
-pub fn get_file_extent_offset(path: &Path, size_bytes: u64) -> Option<i64> {
-    use std::os::unix::io::AsRawFd;
-
-    if size_bytes == 0 {
-        return None;
-    }
-
-    let file = std::fs::File::open(path).ok()?;
-    let fd = file.as_raw_fd();
-
-    #[repr(C, packed(4))]
-    struct Log2Phys {
-        l2p_flags: u32,
-        l2p_contigbytes: i64,
-        l2p_devoffset: i64,
-    }
-
-    let mut l2p = Log2Phys {
-        l2p_flags: 0,
-        l2p_contigbytes: size_bytes as i64,
-        l2p_devoffset: 0,
-    };
-
-    const F_LOG2PHYS_EXT: std::ffi::c_int = 65;
-    unsafe extern "C" {
-        fn fcntl(fd: std::ffi::c_int, cmd: std::ffi::c_int, ...) -> std::ffi::c_int;
-    }
-
-    let ret = unsafe { fcntl(fd, F_LOG2PHYS_EXT, &mut l2p) };
-    if ret == 0 && l2p.l2p_devoffset > 0 {
-        Some(l2p.l2p_devoffset)
-    } else {
-        None
-    }
-}
-
-#[cfg(not(target_os = "macos"))]
-pub fn get_file_extent_offset(_path: &Path, _size_bytes: u64) -> Option<i64> {
-    None
-}
-
 /// Identifies whether a candidate copy shares physical storage with a retained original or reference file.
 ///
 /// 1. Hardlink: Inode and device IDs match (`nlink > 1`).
 /// 2. APFS clone: Inodes differ, but extent offset query reveals shared underlying disk blocks.
 /// 3. Independent: Files occupy separate storage allocations.
+///
+/// Extent-offset lookup is platform-specific and lives entirely behind
+/// `PlatformAdapter::file_extent_offset` in `platform.rs` — the one file
+/// carrying operating-system conditionals — so this module has none.
 pub fn detect_storage_sharing(
     candidate: &CandidateFile,
     reference: &CandidateFile,
+    adapter: &dyn PlatformAdapter,
 ) -> StorageSharingKind {
     // Stage 1: Hardlink detection (same inode on the same device)
     if candidate.identity.device_id == reference.identity.device_id
@@ -151,8 +110,8 @@ pub fn detect_storage_sharing(
     // Stage 2: APFS copy-on-write clone detection
     if candidate.identity.device_id == reference.identity.device_id && candidate.size_bytes > 0 {
         if let (Some(cand_ext), Some(ref_ext)) = (
-            get_file_extent_offset(&candidate.path, candidate.size_bytes),
-            get_file_extent_offset(&reference.path, reference.size_bytes),
+            adapter.file_extent_offset(&candidate.path, candidate.size_bytes),
+            adapter.file_extent_offset(&reference.path, reference.size_bytes),
         ) {
             if cand_ext == ref_ext {
                 return StorageSharingKind::ApfsClone;
