@@ -43,13 +43,12 @@ impl<S: ProgressSink> ProgressThrottler<S> {
 
     /// Poll if pending coalesced progress is due for emission based on the current timestamp.
     pub fn poll_emit_due(&mut self, now: Instant) {
-        if let Some(last) = self.last_emitted {
-            if now.saturating_duration_since(last) >= self.min_interval {
-                if let Some(payload) = self.coalesced.take() {
-                    self.last_emitted = Some(now);
-                    self.sink.emit_progress(payload);
-                }
-            }
+        if let Some(last) = self.last_emitted
+            && now.saturating_duration_since(last) >= self.min_interval
+            && let Some(payload) = self.coalesced.take()
+        {
+            self.last_emitted = Some(now);
+            self.sink.emit_progress(payload);
         }
     }
 

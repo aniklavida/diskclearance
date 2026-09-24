@@ -573,10 +573,10 @@ function run(argv) {
                 destination_path.display()
             )));
         }
-        if let Some(parent) = destination_path.parent() {
-            if !parent.exists() {
-                std::fs::create_dir_all(parent).map_err(|e| PlatformError::Io(e.to_string()))?;
-            }
+        if let Some(parent) = destination_path.parent()
+            && !parent.exists()
+        {
+            std::fs::create_dir_all(parent).map_err(|e| PlatformError::Io(e.to_string()))?;
         }
         std::fs::rename(trashed_path, destination_path)
             .map_err(|e| PlatformError::Io(e.to_string()))
@@ -1076,10 +1076,10 @@ pub mod tests {
                     destination_path.display()
                 )));
             }
-            if let Some(parent) = destination_path.parent() {
-                if !parent.exists() {
-                    let _ = std::fs::create_dir_all(parent);
-                }
+            if let Some(parent) = destination_path.parent()
+                && !parent.exists()
+            {
+                let _ = std::fs::create_dir_all(parent);
             }
             if trashed_path.exists() {
                 std::fs::rename(trashed_path, destination_path)

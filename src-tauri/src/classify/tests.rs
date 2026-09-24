@@ -41,6 +41,7 @@ impl ClassificationTestAdapter {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn make_context<'a>(
         &'a self,
         path: &'a Path,
@@ -169,10 +170,10 @@ impl PlatformAdapter for ClassificationTestAdapter {
                 destination_path.display()
             )));
         }
-        if let Some(parent) = destination_path.parent() {
-            if !parent.exists() {
-                std::fs::create_dir_all(parent).map_err(|e| PlatformError::Io(e.to_string()))?;
-            }
+        if let Some(parent) = destination_path.parent()
+            && !parent.exists()
+        {
+            std::fs::create_dir_all(parent).map_err(|e| PlatformError::Io(e.to_string()))?;
         }
         std::fs::rename(trashed_path, destination_path)
             .map_err(|e| PlatformError::Io(e.to_string()))

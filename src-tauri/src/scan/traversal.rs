@@ -56,11 +56,14 @@ impl MemoryTracker {
     }
 }
 
+/// Callback invoked by traversal test hooks.
+pub type TraversalHook = Box<dyn Fn(&Path) + Send + Sync>;
+
 /// Optional test hooks for intercepting traversal steps without race conditions.
 #[derive(Default)]
 pub struct TraversalHooks {
-    pub on_before_entry_stat: Option<Box<dyn Fn(&Path) + Send + Sync>>,
-    pub on_entry_visited: Option<Box<dyn Fn(&Path) + Send + Sync>>,
+    pub on_before_entry_stat: Option<TraversalHook>,
+    pub on_entry_visited: Option<TraversalHook>,
 }
 
 /// Output of a traversal operation.
@@ -221,10 +224,10 @@ where
             let entry_path = dir_entry.path();
 
             // Fire optional test hook before stat
-            if let Some(hooks) = options.hooks {
-                if let Some(ref hook) = hooks.on_before_entry_stat {
-                    hook(&entry_path);
-                }
+            if let Some(hooks) = options.hooks
+                && let Some(ref hook) = hooks.on_before_entry_stat
+            {
+                hook(&entry_path);
             }
 
             // Inspect entry metadata via platform adapter
@@ -346,10 +349,10 @@ where
                 modified_ms: meta.modified_ms,
             };
 
-            if let Some(hooks) = options.hooks {
-                if let Some(ref hook) = hooks.on_entry_visited {
-                    hook(&entry_path);
-                }
+            if let Some(hooks) = options.hooks
+                && let Some(ref hook) = hooks.on_entry_visited
+            {
+                hook(&entry_path);
             }
 
             on_entry(entry.clone());
@@ -499,8 +502,7 @@ mod tests {
         // Measurable bound: returns in under 50ms once cancellation triggered
         assert!(
             elapsed.as_millis() < 500,
-            "Cancellation must return quickly, took {:?}",
-            elapsed
+            "Cancellation must return quickly, took {elapsed:?}"
         );
         // Retained partial result verified before cancel
         assert!(result.coverage.items_scanned >= cancel_after);

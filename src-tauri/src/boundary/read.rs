@@ -374,7 +374,7 @@ pub fn fetch_folder_aggregate_core(
     } else {
         format!("{}/", args.path)
     };
-    let pattern = format!("{}%", path_prefix);
+    let pattern = format!("{path_prefix}%");
 
     let mut stmt = conn
         .prepare("SELECT path, size_bytes FROM findings WHERE session_id = ? AND path LIKE ?")
@@ -396,35 +396,33 @@ pub fn fetch_folder_aggregate_core(
             reason: e.to_string(),
         })?;
 
-    for row in rows {
-        if let Ok((path, size)) = row {
-            total_size += size;
-            total_count += 1;
+    for (path, size) in rows.flatten() {
+        total_size += size;
+        total_count += 1;
 
-            if !path.starts_with(&path_prefix) {
-                continue;
-            }
-            let rel = &path[path_prefix.len()..];
-            let parts: Vec<&str> = rel.split('/').collect();
-            if parts.is_empty() || parts[0].is_empty() {
-                continue;
-            }
-            let is_dir = parts.len() > 1;
-            let name = parts[0].to_string();
-
-            let entry = children
-                .entry(name.clone())
-                .or_insert_with(|| FolderAggregateEntry {
-                    name: name.clone(),
-                    path: format!("{}{}", path_prefix, name),
-                    size_bytes: 0,
-                    file_count: 0,
-                    is_dir,
-                });
-            entry.size_bytes += size;
-            entry.file_count += 1;
-            entry.is_dir = entry.is_dir || is_dir;
+        if !path.starts_with(&path_prefix) {
+            continue;
         }
+        let rel = &path[path_prefix.len()..];
+        let parts: Vec<&str> = rel.split('/').collect();
+        if parts.is_empty() || parts[0].is_empty() {
+            continue;
+        }
+        let is_dir = parts.len() > 1;
+        let name = parts[0].to_string();
+
+        let entry = children
+            .entry(name.clone())
+            .or_insert_with(|| FolderAggregateEntry {
+                name: name.clone(),
+                path: format!("{path_prefix}{name}"),
+                size_bytes: 0,
+                file_count: 0,
+                is_dir,
+            });
+        entry.size_bytes += size;
+        entry.file_count += 1;
+        entry.is_dir = entry.is_dir || is_dir;
     }
 
     Ok(FolderAggregate {
@@ -483,15 +481,13 @@ pub fn fetch_storage_reclamation_report_core(
             reason: e.to_string(),
         })?;
 
-    for row in rows {
-        if let Ok((class, size)) = row {
-            if class == "Review" || class == "Trash" {
-                pending_in_trash_bytes += size;
-            } else if class == "Rebuildable" || class == "PermanentDelete" {
-                permanently_reclaimed_bytes += size;
-            } else {
-                pending_in_trash_bytes += size;
-            }
+    for (class, size) in rows.flatten() {
+        if class == "Review" || class == "Trash" {
+            pending_in_trash_bytes += size;
+        } else if class == "Rebuildable" || class == "PermanentDelete" {
+            permanently_reclaimed_bytes += size;
+        } else {
+            pending_in_trash_bytes += size;
         }
     }
     Ok(StorageReclamationReport {

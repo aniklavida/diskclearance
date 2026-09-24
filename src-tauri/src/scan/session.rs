@@ -101,7 +101,7 @@ impl ScanSessionRepository {
             .map(|v| v.max(0) as u64)
             .unwrap_or(0);
 
-        let query_limit = limit.max(1).min(1000) as i64;
+        let query_limit = limit.clamp(1, 1000) as i64;
         let mut items = Vec::new();
 
         if let Some(c) = cursor {
