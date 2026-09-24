@@ -1,6 +1,12 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
+pub use crate::applications::{
+    ApplicationEntry, ApplicationInventory, ApplicationMatchEvidence, MatchReason, MatchStrength,
+    RelatedFile, RelatedLocationKind, RemovalState,
+};
+
+use crate::applications::discover_inventory;
 use crate::boundary::cancellation::CancellationRegistry;
 use crate::boundary::error::CommandError;
 
@@ -82,21 +88,6 @@ pub struct FolderAggregate {
     pub total_size_bytes: u64,
     pub file_count: u64,
     pub children: Vec<FolderAggregateEntry>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
-#[serde(rename_all = "camelCase")]
-pub struct ApplicationEntry {
-    pub bundle_id: String,
-    pub name: String,
-    pub install_path: String,
-    pub size_bytes: u64,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
-#[serde(rename_all = "camelCase")]
-pub struct ApplicationInventory {
-    pub applications: Vec<ApplicationEntry>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -511,13 +502,20 @@ pub fn fetch_storage_reclamation_report_core(
     })
 }
 
-#[tauri::command]
-pub fn fetch_application_inventory() -> Result<ApplicationInventory, CommandError> {
-    // Application inventory inspection is planned for subsequent implementation.
-    Err(CommandError::Unsupported {
+pub fn fetch_application_inventory_core(
+    adapter: &dyn PlatformAdapter,
+) -> Result<ApplicationInventory, CommandError> {
+    discover_inventory(adapter).map_err(|error| CommandError::Unsupported {
         feature: "fetch_application_inventory".into(),
-        reason: "Application inventory discovery is not implemented in this milestone".into(),
+        reason: error.to_string(),
     })
+}
+
+#[tauri::command]
+pub fn fetch_application_inventory(
+    adapter: tauri::State<'_, Arc<dyn PlatformAdapter>>,
+) -> Result<ApplicationInventory, CommandError> {
+    fetch_application_inventory_core(adapter.inner().as_ref())
 }
 
 #[tauri::command]

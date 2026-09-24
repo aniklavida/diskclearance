@@ -1,3 +1,4 @@
+pub mod applications;
 pub mod boundary;
 pub mod classify;
 pub mod duplicates;

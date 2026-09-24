@@ -90,6 +90,12 @@ pub fn generate_typescript_bindings() -> String {
     emit_type!(FetchFolderAggregateArgs);
     emit_type!(FolderAggregateEntry);
     emit_type!(FolderAggregate);
+    emit_type!(MatchReason);
+    emit_type!(MatchStrength);
+    emit_type!(ApplicationMatchEvidence);
+    emit_type!(RelatedLocationKind);
+    emit_type!(RelatedFile);
+    emit_type!(RemovalState);
     emit_type!(ApplicationEntry);
     emit_type!(ApplicationInventory);
     emit_type!(DetectDuplicatesArgs);

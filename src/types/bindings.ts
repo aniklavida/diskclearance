@@ -137,14 +137,65 @@ export type FolderAggregate = {
   children: Array<FolderAggregateEntry>;
 };
 
-export type ApplicationEntry = {
-  bundleId: string;
-  name: string;
-  installPath: string;
-  sizeBytes: bigint;
+export type MatchReason =
+  | "exactBundleIdentifier"
+  | "developerDirectory"
+  | "similarName"
+  | "sensitiveCredential"
+  | "sharedComponent";
+
+export type MatchStrength = "strong" | "weak" | "guess" | "excluded";
+
+export type ApplicationMatchEvidence = {
+  reason: MatchReason;
+  strength: MatchStrength;
+  explanation: string;
 };
 
-export type ApplicationInventory = { applications: Array<ApplicationEntry> };
+export type RelatedLocationKind =
+  | "applicationSupport"
+  | "caches"
+  | "preferences"
+  | "containers"
+  | "groupContainers"
+  | "savedApplicationState"
+  | "logs"
+  | "launchAgents"
+  | "frameworks";
+
+export type RelatedFile = {
+  path: string;
+  name: string;
+  location: RelatedLocationKind;
+  measuredFootprintBytes: bigint;
+  safetyClass: SafetyClass;
+  selectedByDefault: boolean;
+  offeredForRemoval: boolean;
+  evidence: ApplicationMatchEvidence;
+};
+
+export type RemovalState = "ready" | "quitRequired";
+
+export type ApplicationEntry = {
+  bundleId: string | null;
+  name: string;
+  version: string | null;
+  installPath: string;
+  bundleFootprintBytes: bigint;
+  relatedFilesFootprintBytes: bigint;
+  combinedFootprintBytes: bigint;
+  isRunning: boolean;
+  canRemove: boolean;
+  bundleSelectedByDefault: boolean;
+  removalState: RemovalState;
+  removalExplanation: string;
+  relatedFiles: Array<RelatedFile>;
+};
+
+export type ApplicationInventory = {
+  applications: Array<ApplicationEntry>;
+  orphans: Array<RelatedFile>;
+};
 
 export type DetectDuplicatesArgs = {
   roots: Array<string>;
