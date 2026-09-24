@@ -15,6 +15,7 @@ export const COMMAND_FETCH_FINDINGS_PAGE = "fetch_findings_page";
 export const COMMAND_FETCH_FOLDER_AGGREGATE = "fetch_folder_aggregate";
 export const COMMAND_FETCH_APPLICATION_INVENTORY =
   "fetch_application_inventory";
+export const COMMAND_DETECT_EXACT_DUPLICATES = "detect_exact_duplicates";
 export const COMMAND_BUILD_PLAN = "build_plan";
 export const COMMAND_FETCH_PLAN = "fetch_plan";
 export const COMMAND_REVALIDATE_PLAN = "revalidate_plan";
@@ -144,6 +145,85 @@ export type ApplicationEntry = {
 };
 
 export type ApplicationInventory = { applications: Array<ApplicationEntry> };
+
+export type DetectDuplicatesArgs = {
+  roots: Array<string>;
+  retainedRule: RetainedRule | null;
+};
+
+export type DuplicateReport = {
+  groups: Array<DuplicateGroup>;
+  totalReclaimableBytes: bigint;
+  totalDuplicateBytes: bigint;
+};
+
+// Safety class
+export type SafetyClass = "rebuildable" | "review" | "protected";
+
+// Duplicates domain
+export type StorageSharingKind = "independent" | "hardlink" | "apfsClone";
+
+export type RetainedRule =
+  "oldestByModified" | "newestByModified" | "shortestPath";
+
+export type DuplicateItem = {
+  id: string;
+  path: string;
+  canonicalPath: string;
+  sizeBytes: bigint;
+  modifiedMs: bigint | null;
+  inode: bigint;
+  deviceId: bigint;
+  isRetained: boolean;
+  /**
+   * Selection status. Invariant: always false by default.
+   */
+  isSelected: boolean;
+  sharingKind: StorageSharingKind;
+};
+
+export type DuplicateGroup = {
+  groupId: string;
+  sizeBytes: bigint;
+  contentHash: string;
+  /**
+   * Duplicates always classify as Review to require explicit user decision.
+   */
+  safetyClass: SafetyClass;
+  /**
+   * The structurally designated retained copy.
+   */
+  retained: DuplicateItem;
+  /**
+   * Independent candidate copies that can be chosen for deletion.
+   */
+  candidates: Array<DuplicateItem>;
+  /**
+   * Copies that share storage (hardlinks/APFS clones) contributing zero reclaimable bytes.
+   */
+  sharedStorageItems: Array<DuplicateItem>;
+  /**
+   * Net reclaimable bytes (only counts independent candidates, not shared storage or retained).
+   */
+  reclaimableBytes: bigint;
+  /**
+   * Total apparent bytes across all copies in the group.
+   */
+  totalGroupBytes: bigint;
+};
+
+export type DuplicatePlanError =
+  | {
+      kind: "retainedItemProtected";
+      details: { group_id: string; path: string };
+    }
+  | { kind: "entireGroupSelected"; details: { group_id: string } }
+  | {
+      kind: "storageSharingItemNotDeletable";
+      details: { group_id: string; path: string };
+    }
+  | { kind: "itemNotFound"; details: { group_id: string; item_id: string } }
+  | { kind: "noItemsSelected"; details: { group_id: string } };
 
 // Plan capability
 export type BuildPlanArgs = { sessionId: string; findingIds: Array<string> };

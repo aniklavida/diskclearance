@@ -286,6 +286,10 @@ impl PlatformAdapter for ClassificationTestAdapter {
             })
         }
     }
+
+    fn file_extent_offset(&self, _path: &Path, _size_bytes: u64) -> Option<i64> {
+        None
+    }
 }
 
 // ---------------------------------------------------------------------------

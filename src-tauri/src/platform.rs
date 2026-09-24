@@ -215,6 +215,11 @@ pub trait PlatformAdapter: Send + Sync {
         target: &Path,
     ) -> Result<MountBoundary, PlatformError>;
     fn read_entry_metadata(&self, path: &Path) -> Result<EntryMetadata, PlatformError>;
+
+    /// Physical device extent offset for a file, used to detect copy-on-write
+    /// clones (e.g. APFS) that share storage without sharing an inode.
+    /// `None` means unsupported on this platform, zero-sized, or unknown.
+    fn file_extent_offset(&self, path: &Path, size_bytes: u64) -> Option<i64>;
 }
 
 /// Fallback adapter implementing the full trait with typed unsupported errors.
@@ -313,6 +318,10 @@ impl PlatformAdapter for UnsupportedAdapter {
 
     fn read_entry_metadata(&self, _path: &Path) -> Result<EntryMetadata, PlatformError> {
         Err(PlatformError::Unsupported("read_entry_metadata"))
+    }
+
+    fn file_extent_offset(&self, _path: &Path, _size_bytes: u64) -> Option<i64> {
+        None
     }
 }
 
@@ -694,6 +703,45 @@ function run(argv) {
             nlink: meta.nlink(),
         })
     }
+
+    /// Queries the physical device extent offset via the F_LOG2PHYS_EXT fcntl.
+    /// Two files whose extent offsets match share the same underlying disk
+    /// blocks — the signature of an APFS copy-on-write clone.
+    fn file_extent_offset(&self, path: &Path, size_bytes: u64) -> Option<i64> {
+        use std::os::unix::io::AsRawFd;
+
+        if size_bytes == 0 {
+            return None;
+        }
+
+        let file = std::fs::File::open(path).ok()?;
+        let fd = file.as_raw_fd();
+
+        #[repr(C, packed(4))]
+        struct Log2Phys {
+            l2p_flags: u32,
+            l2p_contigbytes: i64,
+            l2p_devoffset: i64,
+        }
+
+        let mut l2p = Log2Phys {
+            l2p_flags: 0,
+            l2p_contigbytes: size_bytes as i64,
+            l2p_devoffset: 0,
+        };
+
+        const F_LOG2PHYS_EXT: std::ffi::c_int = 65;
+        unsafe extern "C" {
+            fn fcntl(fd: std::ffi::c_int, cmd: std::ffi::c_int, ...) -> std::ffi::c_int;
+        }
+
+        let ret = unsafe { fcntl(fd, F_LOG2PHYS_EXT, &mut l2p) };
+        if ret == 0 && l2p.l2p_devoffset > 0 {
+            Some(l2p.l2p_devoffset)
+        } else {
+            None
+        }
+    }
 }
 
 #[cfg(target_os = "windows")]
@@ -802,6 +850,10 @@ impl PlatformAdapter for WindowsAdapter {
     fn read_entry_metadata(&self, _path: &Path) -> Result<EntryMetadata, PlatformError> {
         Err(PlatformError::Unsupported("read_entry_metadata on Windows"))
     }
+
+    fn file_extent_offset(&self, _path: &Path, _size_bytes: u64) -> Option<i64> {
+        None
+    }
 }
 
 /// Create the platform adapter instance for the current operating system.
@@ -822,6 +874,34 @@ pub fn create_platform_adapter() -> Arc<dyn PlatformAdapter> {
 
 static CURRENT_ADAPTER: std::sync::LazyLock<Arc<dyn PlatformAdapter>> =
     std::sync::LazyLock::new(create_platform_adapter);
+
+/// Test-only fixture helper: creates a copy-on-write clone of `src` at `dst`
+/// where the platform supports one (APFS via `clonefile`). Returns `false`
+/// (never panics) where cloning isn't supported, so callers can skip rather
+/// than fail on a volume that doesn't support it. Lives here, not in a test
+/// file, because it is the one place `cfg(target_os ...)` is allowed.
+#[cfg(target_os = "macos")]
+pub fn try_create_clone_for_test(src: &Path, dst: &Path) -> bool {
+    unsafe extern "C" {
+        fn clonefile(
+            src: *const std::ffi::c_char,
+            dst: *const std::ffi::c_char,
+            flags: u32,
+        ) -> std::ffi::c_int;
+    }
+    let Ok(src_c) = std::ffi::CString::new(src.to_str().unwrap_or_default()) else {
+        return false;
+    };
+    let Ok(dst_c) = std::ffi::CString::new(dst.to_str().unwrap_or_default()) else {
+        return false;
+    };
+    unsafe { clonefile(src_c.as_ptr(), dst_c.as_ptr(), 0) == 0 }
+}
+
+#[cfg(not(target_os = "macos"))]
+pub fn try_create_clone_for_test(_src: &Path, _dst: &Path) -> bool {
+    false
+}
 
 /// Return a reference-counted handle to the resolved platform adapter.
 pub fn current_platform_adapter() -> Arc<dyn PlatformAdapter> {
@@ -1253,6 +1333,10 @@ pub mod tests {
                 });
             }
             Err(PlatformError::NotFound(path.to_path_buf()))
+        }
+
+        fn file_extent_offset(&self, _path: &Path, _size_bytes: u64) -> Option<i64> {
+            None
         }
     }
 

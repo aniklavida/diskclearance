@@ -45,6 +45,7 @@ pub fn generate_typescript_bindings() -> String {
     out.push_str(
         "export const COMMAND_FETCH_APPLICATION_INVENTORY = \"fetch_application_inventory\";\n",
     );
+    out.push_str("export const COMMAND_DETECT_EXACT_DUPLICATES = \"detect_exact_duplicates\";\n");
     out.push_str("export const COMMAND_BUILD_PLAN = \"build_plan\";\n");
     out.push_str("export const COMMAND_FETCH_PLAN = \"fetch_plan\";\n");
     out.push_str("export const COMMAND_REVALIDATE_PLAN = \"revalidate_plan\";\n");
@@ -91,6 +92,18 @@ pub fn generate_typescript_bindings() -> String {
     emit_type!(FolderAggregate);
     emit_type!(ApplicationEntry);
     emit_type!(ApplicationInventory);
+    emit_type!(DetectDuplicatesArgs);
+    emit_type!(DuplicateReport);
+
+    out.push_str("// Safety class\n");
+    emit_type!(crate::classify::class::SafetyClass);
+
+    out.push_str("// Duplicates domain\n");
+    emit_type!(crate::duplicates::StorageSharingKind);
+    emit_type!(crate::duplicates::RetainedRule);
+    emit_type!(crate::duplicates::DuplicateItem);
+    emit_type!(crate::duplicates::DuplicateGroup);
+    emit_type!(crate::duplicates::DuplicatePlanError);
 
     out.push_str("// Plan capability\n");
     emit_type!(BuildPlanArgs);

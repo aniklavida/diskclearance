@@ -99,6 +99,21 @@ pub struct ApplicationInventory {
     pub applications: Vec<ApplicationEntry>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct DetectDuplicatesArgs {
+    pub roots: Vec<String>,
+    pub retained_rule: Option<crate::duplicates::RetainedRule>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct DuplicateReport {
+    pub groups: Vec<crate::duplicates::DuplicateGroup>,
+    pub total_reclaimable_bytes: u64,
+    pub total_duplicate_bytes: u64,
+}
+
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
@@ -502,6 +517,80 @@ pub fn fetch_application_inventory() -> Result<ApplicationInventory, CommandErro
     Err(CommandError::Unsupported {
         feature: "fetch_application_inventory".into(),
         reason: "Application inventory discovery is not implemented in this milestone".into(),
+    })
+}
+
+#[tauri::command]
+pub fn detect_exact_duplicates(
+    args: DetectDuplicatesArgs,
+    adapter: tauri::State<'_, Arc<dyn PlatformAdapter>>,
+    cancellations: tauri::State<'_, CancellationRegistry>,
+) -> Result<DuplicateReport, CommandError> {
+    detect_exact_duplicates_core(args, adapter.inner().as_ref(), &cancellations)
+}
+
+pub fn detect_exact_duplicates_core(
+    args: DetectDuplicatesArgs,
+    adapter: &dyn PlatformAdapter,
+    cancellations: &CancellationRegistry,
+) -> Result<DuplicateReport, CommandError> {
+    let roots: Vec<PathBuf> = if args.roots.is_empty() {
+        adapter
+            .default_scan_roots()
+            .map_err(|e| CommandError::Unsupported {
+                feature: "detect_exact_duplicates".into(),
+                reason: format!("failed to resolve default scan roots: {e}"),
+            })?
+            .into_iter()
+            .map(|r| r.path)
+            .collect()
+    } else {
+        args.roots.iter().map(PathBuf::from).collect()
+    };
+
+    let session_id = "duplicate-scan";
+    let token = cancellations.register(session_id);
+
+    let mut candidate_paths = Vec::new();
+    let _result = walk_roots(
+        TraversalOptions {
+            session_id: session_id.to_string(),
+            roots,
+            adapter,
+            cancellation_token: &token,
+            tracker: None,
+            hooks: None,
+            collect_entries: true,
+        },
+        |_| {},
+        |entry| {
+            if entry.entry_type == crate::platform::EntryType::File {
+                candidate_paths.push(entry.canonical_path);
+            }
+        },
+        |_| {},
+    );
+
+    let options = crate::duplicates::DuplicateDetectionOptions {
+        retained_rule: args.retained_rule.unwrap_or_default(),
+        cancellation_token: token,
+    };
+    let mut metrics = crate::duplicates::DuplicateDetectionMetrics::default();
+
+    let groups =
+        crate::duplicates::detect_duplicates(&candidate_paths, adapter, &options, &mut metrics)
+            .map_err(|e| CommandError::Unsupported {
+                feature: "detect_exact_duplicates".into(),
+                reason: e.to_string(),
+            })?;
+
+    let total_reclaimable_bytes = groups.iter().map(|g| g.reclaimable_bytes).sum();
+    let total_duplicate_bytes = groups.iter().map(|g| g.total_group_bytes).sum();
+
+    Ok(DuplicateReport {
+        groups,
+        total_reclaimable_bytes,
+        total_duplicate_bytes,
     })
 }
 
