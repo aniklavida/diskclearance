@@ -125,9 +125,15 @@ body {
 button {
   font: inherit;
   min-height: var(--target-min);
+  min-width: var(--target-min);
 }
 
-:focus-visible {
+:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible {
   outline: var(--focus-ring);
   outline-offset: var(--focus-ring-offset);
 }
@@ -637,6 +643,686 @@ dd {
   border-color: var(--accent);
 }
 
+/* Interactive Target Min Constraints */
+input[type="checkbox"],
+select,
+.nav-item,
+.action-btn,
+.btn-primary,
+.btn-secondary,
+.breadcrumb-btn,
+.switcher-btn,
+.disclosure-btn {
+  min-height: var(--target-min);
+  min-width: var(--target-min);
+}
+
+.nav-icon {
+  font-size: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+}
+
+.nav-label {
+  flex: 1;
+}
+
+/* Screen reader utility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Safety classification badges with icon + text */
+.safety-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: 22px;
+  padding: 2px var(--space-8);
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.safety-badge.rebuildable {
+  background: var(--class-rebuildable-bg);
+  color: var(--class-rebuildable-fg);
+}
+
+.safety-badge.review {
+  background: var(--class-review-bg);
+  color: var(--class-review-fg);
+}
+
+.safety-badge.protected {
+  background: var(--class-protected-bg);
+  color: var(--class-protected-fg);
+}
+
+.safety-badge.irreversible {
+  background: var(--class-irreversible-bg);
+  color: var(--class-irreversible-fg);
+}
+
+/* Primary scan button */
+.scan-mac-btn {
+  margin-top: var(--space-24);
+  padding: var(--space-12) var(--space-24);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* Cleanup tab and finding row layout */
+.cleanup-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  padding-bottom: 120px; /* Dedicated clearance so docked review tray never occludes content */
+  scroll-padding-bottom: 120px;
+}
+
+.finding-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.finding-row-container {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+}
+
+.finding-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  padding: var(--space-8) var(--space-12);
+  min-height: var(--target-primary);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  width: 100%;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.finding-row:hover {
+  background: var(--accent-soft);
+}
+
+.col-checkbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--target-min);
+  min-height: var(--target-min);
+}
+
+.row-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.col-name {
+  flex: 1;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.col-badge {
+  flex-shrink: 0;
+}
+
+.col-last-activity {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.col-recoverability {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.col-size {
+  flex-shrink: 0;
+  font-weight: 650;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.disclosure-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.disclosure-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--line);
+}
+
+/* Evidence disclosure drawer */
+.evidence-drawer {
+  padding: var(--space-16);
+  margin: 0 var(--space-12) var(--space-12);
+  background: var(--surface-raised);
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-control);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  font-size: 13px;
+}
+
+.evidence-field {
+  display: flex;
+  gap: var(--space-8);
+}
+
+.evidence-label {
+  font-weight: 600;
+  color: var(--text-secondary);
+  min-width: 140px;
+}
+
+.evidence-path {
+  font-family: monospace;
+  word-break: break-all;
+  background: var(--window);
+  padding: 2px var(--space-4);
+  border-radius: 4px;
+}
+
+/* Review tray (fixed docked bar) */
+.review-tray {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  left: 220px;
+  padding: var(--space-16) var(--space-24);
+  background: var(--surface-raised);
+  border-top: 1px solid var(--divider);
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.06);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-16);
+  z-index: 50;
+}
+
+.review-tray-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.tray-badge {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.review-totals {
+  display: flex;
+  gap: var(--space-16);
+  font-size: 13px;
+}
+
+.tray-figure {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.tray-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.btn-secondary {
+  padding: var(--space-8) var(--space-16);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--text-primary);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  background: var(--accent-soft);
+}
+
+.btn-primary {
+  padding: var(--space-8) var(--space-16);
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  background: var(--accent);
+  color: var(--surface-raised);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  filter: brightness(1.1);
+}
+
+@media (prefers-color-scheme: dark) {
+  .btn-primary {
+    color: var(--window);
+  }
+}
+
+.btn-danger {
+  padding: var(--space-8) var(--space-16);
+  border: 1px solid var(--class-irreversible-fg);
+  border-radius: var(--radius-control);
+  background: var(--class-irreversible-bg);
+  color: var(--class-irreversible-fg);
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.btn-danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Confirmation sheet modal dialog */
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: grid;
+  place-items: center;
+  z-index: 100;
+}
+
+.confirmation-sheet {
+  width: 90%;
+  max-width: 620px;
+  max-height: 480px;
+  background: var(--surface-raised);
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-surface);
+  padding: var(--space-24);
+  box-shadow: var(--card-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  overflow-y: auto;
+}
+
+.confirmation-sheet.irreversible {
+  border-color: var(--class-irreversible-fg);
+}
+
+.sheet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sheet-header h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.close-btn {
+  background: transparent;
+  border: none;
+  font-size: 18px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.close-btn:hover {
+  color: var(--text-primary);
+}
+
+.irreversible-warning-banner {
+  background: var(--class-irreversible-bg);
+  color: var(--class-irreversible-fg);
+  padding: var(--space-8) var(--space-12);
+  border-radius: var(--radius-control);
+  font-weight: 700;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.consequence-text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
+.storage-impact-box {
+  background: var(--surface);
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-control);
+  padding: var(--space-12);
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.ack-label {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--class-irreversible-fg);
+}
+
+.sheet-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-12);
+  margin-top: var(--space-8);
+}
+
+/* Explore view, treemap, and folder table */
+.explore-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+}
+
+.explore-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-16);
+  flex-wrap: wrap;
+}
+
+.breadcrumbs-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.breadcrumb-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 500;
+  padding: var(--space-4) var(--space-8);
+  cursor: pointer;
+}
+
+.breadcrumb-btn:hover {
+  background: var(--accent-soft);
+}
+
+.breadcrumb-btn[aria-current="location"] {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.breadcrumb-separator {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.view-switcher {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.switcher-btn {
+  background: transparent;
+  border: none;
+  padding: var(--space-8) var(--space-12);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.switcher-btn.active {
+  background: var(--accent-soft);
+  color: var(--accent-fg);
+}
+
+.explore-content-layout {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: var(--space-16);
+}
+
+/* Treemap layout */
+.treemap-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--space-8);
+  min-height: 340px;
+  padding: var(--space-12);
+  background: var(--window);
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-card);
+}
+
+.treemap-tile {
+  padding: var(--space-12);
+  border-radius: var(--radius-control);
+  background: var(--surface-raised);
+  border: 1px solid var(--divider);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--space-8);
+  cursor: pointer;
+  min-height: 90px;
+  min-width: var(--target-min);
+  text-align: left;
+}
+
+.treemap-tile:hover,
+.treemap-tile:focus-visible {
+  border-color: var(--accent);
+}
+
+.treemap-tile.rebuildable {
+  border-color: var(--class-rebuildable-fg);
+  background: var(--class-rebuildable-bg);
+}
+
+.treemap-tile.review {
+  border-color: var(--class-review-fg);
+  background: var(--class-review-bg);
+}
+
+.treemap-tile.protected {
+  border-color: var(--class-protected-fg);
+  background: var(--class-protected-bg);
+}
+
+.tile-name {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.tile-size {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* Folder table (Treemap equivalent representation) */
+.folder-table-wrapper {
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-card);
+  background: var(--surface-raised);
+  overflow-x: auto;
+}
+
+.folder-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+}
+
+.folder-table th,
+.folder-table td {
+  padding: var(--space-8) var(--space-12);
+  border-bottom: 1px solid var(--divider);
+  vertical-align: middle;
+}
+
+.folder-table th {
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.folder-table tr {
+  cursor: pointer;
+}
+
+.folder-table tr:hover,
+.folder-table tr:focus-visible {
+  background: var(--accent-soft);
+}
+
+/* Inspector panel */
+.inspector-panel {
+  padding: var(--space-16);
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-card);
+  background: var(--surface-raised);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  font-size: 13px;
+}
+
+.inspector-panel h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.inspector-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  color: var(--text-secondary);
+}
+
+.inspector-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  margin-top: var(--space-8);
+}
+
+/* Responsive Breakpoints */
+@media (max-width: 760px) {
+  .window-shell {
+    grid-template-columns: 72px 1fr;
+  }
+
+  .sidebar {
+    padding: var(--space-16) var(--space-8);
+    text-align: center;
+  }
+
+  .sidebar strong {
+    display: none;
+  }
+
+  .nav-item {
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 2px;
+    padding: var(--space-8) 2px;
+    font-size: 11px;
+  }
+
+  .content {
+    padding: var(--space-24) var(--space-16);
+  }
+
+  .cleanup-container {
+    padding-bottom: 160px;
+  }
+
+  .review-tray {
+    left: 72px;
+    flex-direction: column;
+    align-items: stretch;
+    padding: var(--space-12) var(--space-16);
+  }
+
+  .review-totals {
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .col-last-activity,
+  .col-recoverability {
+    display: none;
+  }
+
+  .explore-content-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .inspector-panel.desktop-only {
+    display: none;
+  }
+}
+
+/* Reduced Motion specifications */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -644,5 +1330,17 @@ dd {
     scroll-behavior: auto !important;
     transition: none !important;
     animation: none !important;
+    transform: none !important;
+  }
+
+  .treemap-tile,
+  .treemap-container,
+  .confirmation-sheet,
+  .review-tray,
+  .evidence-drawer,
+  .inspector-sheet {
+    transition: none !important;
+    animation: none !important;
+    transform: none !important;
   }
 }
