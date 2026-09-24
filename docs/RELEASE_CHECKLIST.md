@@ -50,8 +50,27 @@ They are commitments, not coverage. **Production deletion stays disabled until t
 
 - [ ] Frontend build, tests, formatting, Rust checks, and Rust tests pass.
 - [ ] Large-tree, low-disk, permission-denied, interrupted, and corrupt-database cases pass.
-- [ ] Keyboard, screen reader, contrast, reduced motion, light, and dark checks pass.
+- [ ] Automated accessibility and responsive conformance suite passes:
+  - Contrast check passes on every semantic token pair in light and dark mode (`src/tokens.test.ts`).
+  - Focus-visible presence check (2px accent outline, 2px offset) across interactive elements (`src/tokens.test.ts`).
+  - Interactive element minimum target size check (>= 32×32 px) (`src/tokens.test.ts`).
+  - Keyboard traversal of Home, Cleanup, Explore, and confirmation sheets with focus trapping and focus restoration (`src/accessibility.test.tsx`).
+  - Screen reader VoiceOver finding row labels and accessible status cues (`src/accessibility.test.tsx`).
+  - Navigable folder table equivalent for treemap (`src/accessibility.test.tsx`).
+  - Reduced Motion chart animation and transition elimination (`src/tokens.test.ts`).
+  - Responsive layout and review tray non-occluding clearance at 760×560 px (`src/accessibility.test.tsx`).
 - [ ] Performance and memory budgets are measured on representative hardware.
+
+### Manual accessibility and responsive gates (not executable in standard CI)
+
+- [ ] **macOS VoiceOver hardware pass:** Navigate the built application using native VoiceOver (`Option-Command-F5`) on Apple Silicon hardware:
+  - Verify finding rows announce entity name, size, safety class, selection state, recoverability, and available keyboard actions without audio clipping.
+  - Verify live scan announcements are throttled at the emitter so assistive technology speech output is not flooded.
+  - Verify the Explore view's folder table equivalent provides full keyboard traversal and VoiceOver table reading order (`VO-arrows`).
+  - Verify destructive confirmation sheets announce action title, consequence in text, and disabled state on the permanent delete button until acknowledged.
+- [ ] **200% zoom and large-text display verification:**
+  - Verify application usability at the minimum window size (`760 × 560 px`) with macOS Accessibility Display "Larger Text" enabled and zoom at 200%.
+  - Verify that navigation controls, finding rows, review tray figures, and modal dialogs remain visible, reachable, and wrap without truncation or clipping.
 
 ## Distribution
 

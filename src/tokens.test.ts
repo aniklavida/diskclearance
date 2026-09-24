@@ -4,8 +4,8 @@ import { describe, expect, it } from "vitest";
 // assertion silently passes against nothing.
 //
 // Node's types are suppressed rather than installed, matching what
-// `vite.config.ts` already does for `node:process` — the card asked for no new
-// dependency, and this needs types only, never shipped code.
+// `vite.config.ts` already does for `node:process` — avoiding unnecessary
+// dependencies since this needs types only, never shipped code.
 // @ts-expect-error type error without @types/node package
 import { readFileSync } from "node:fs";
 
@@ -312,5 +312,91 @@ describe("Design tokens and contrast validation", () => {
       tokens.dark["--class-irreversible-bg"],
     );
     expect(darkRatio).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("asserts primary action button tokens meet AA contrast in both appearances", () => {
+    // Light: surface-raised text on accent background
+    const lightRatio = contrastRatio(
+      tokens.light["--surface-raised"],
+      tokens.light["--accent"],
+    );
+    expect(lightRatio).toBeGreaterThanOrEqual(4.5);
+
+    // Dark: window background text on accent background
+    const darkRatio = contrastRatio(
+      tokens.dark["--window"],
+      tokens.dark["--accent"],
+    );
+    expect(darkRatio).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("asserts accent foreground on raised surface meets AA contrast in both appearances", () => {
+    // Light
+    const lightRatio = contrastRatio(
+      tokens.light["--accent-fg"],
+      tokens.light["--surface-raised"],
+    );
+    expect(lightRatio).toBeGreaterThanOrEqual(4.5);
+
+    // Dark
+    const darkRatio = contrastRatio(
+      tokens.dark["--accent-fg"],
+      tokens.dark["--surface-raised"],
+    );
+    expect(darkRatio).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("asserts focus-visible is present with 2px accent outline and 2px offset across interactive elements", () => {
+    expect(tokens.light["--focus-ring-width"]).toBe("2px");
+    expect(tokens.light["--focus-ring-offset"]).toBe("2px");
+
+    // Must define focus ring on :focus-visible and interactive controls
+    expect(cssContent).toMatch(
+      /:focus-visible[\s\S]*?outline:\s*var\(--focus-ring\)/,
+    );
+    expect(cssContent).toMatch(
+      /:focus-visible[\s\S]*?outline-offset:\s*var\(--focus-ring-offset\)/,
+    );
+    expect(cssContent).toMatch(/button:focus-visible/);
+    expect(cssContent).toMatch(/input:focus-visible/);
+    expect(cssContent).toMatch(/select:focus-visible/);
+    expect(cssContent).toMatch(/\[tabindex\]:focus-visible/);
+  });
+
+  it("asserts minimum interactive target size is at least 32x32 px", () => {
+    const minTarget = parseInt(tokens.light["--target-min"], 10);
+    expect(minTarget).toBeGreaterThanOrEqual(32);
+
+    // Verify interactive elements enforce target-min
+    expect(cssContent).toMatch(
+      /button[\s\S]*?min-height:\s*var\(--target-min\)/,
+    );
+    expect(cssContent).toMatch(
+      /button[\s\S]*?min-width:\s*var\(--target-min\)/,
+    );
+    expect(cssContent).toMatch(
+      /input\[type="checkbox"\][\s\S]*?min-height:\s*var\(--target-min\)/,
+    );
+    expect(cssContent).toMatch(
+      /input\[type="checkbox"\][\s\S]*?min-width:\s*var\(--target-min\)/,
+    );
+  });
+
+  it("asserts reduced motion removes chart animation, transitions, and transforms", () => {
+    const startIndex = cssContent.indexOf(
+      "@media (prefers-reduced-motion: reduce)",
+    );
+    expect(startIndex).toBeGreaterThan(-1);
+    const block = cssContent.slice(startIndex);
+
+    expect(block).toContain("transition: none !important");
+    expect(block).toContain("animation: none !important");
+    expect(block).toContain("transform: none !important");
+
+    // Asserts chart/treemap and modal elements are explicitly targeted
+    expect(block).toContain(".treemap-tile");
+    expect(block).toContain(".treemap-container");
+    expect(block).toContain(".confirmation-sheet");
+    expect(block).toContain(".review-tray");
   });
 });
