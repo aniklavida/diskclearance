@@ -1,11 +1,106 @@
 import { describe, it, expect } from "vitest";
 import { renderToString } from "react-dom/server";
-import { HomeTab, HistoryTab } from "./App";
+import { ApplicationsTab, HomeTab, HistoryTab } from "./App";
 import type {
   HistoryOperationDetail,
   HistoryOperationSummary,
   LifetimeReclamationTotals,
 } from "./types/bindings";
+
+describe("ApplicationsTab", () => {
+  it("surfaces strong and guessed evidence with different authority", () => {
+    const html = renderToString(
+      <ApplicationsTab
+        initialInventory={{
+          applications: [
+            {
+              bundleId: "com.acme.alpha",
+              name: "Alpha",
+              version: "1.0",
+              installPath: "/Applications/Alpha.app",
+              bundleFootprintBytes: 2048n,
+              relatedFilesFootprintBytes: 4096n,
+              combinedFootprintBytes: 6144n,
+              isRunning: false,
+              canRemove: true,
+              bundleSelectedByDefault: true,
+              removalState: "ready",
+              removalExplanation: "Application is not running.",
+              relatedFiles: [
+                {
+                  path: "/Users/test/Library/Caches/com.acme.alpha",
+                  name: "com.acme.alpha",
+                  location: "caches",
+                  measuredFootprintBytes: 2048n,
+                  safetyClass: "rebuildable",
+                  selectedByDefault: true,
+                  offeredForRemoval: true,
+                  evidence: {
+                    reason: "exactBundleIdentifier",
+                    strength: "strong",
+                    explanation: "Matched by bundle identifier",
+                  },
+                },
+                {
+                  path: "/Users/test/Library/Application Support/Alpha Notes",
+                  name: "Alpha Notes",
+                  location: "applicationSupport",
+                  measuredFootprintBytes: 2048n,
+                  safetyClass: "review",
+                  selectedByDefault: false,
+                  offeredForRemoval: true,
+                  evidence: {
+                    reason: "similarName",
+                    strength: "guess",
+                    explanation: "Name looks similar; this is a guess",
+                  },
+                },
+              ],
+            },
+          ],
+          orphans: [],
+        }}
+      />,
+    );
+
+    expect(html).toContain("Matched by bundle identifier");
+    expect(html).toContain("strong evidence");
+    expect(html).toContain("Name looks similar");
+    expect(html).toContain("guess, review required");
+  });
+
+  it("shows why a running application cannot be removed", () => {
+    const html = renderToString(
+      <ApplicationsTab
+        initialInventory={{
+          applications: [
+            {
+              bundleId: "com.acme.running",
+              name: "Running App",
+              version: "1.0",
+              installPath: "/Applications/Running App.app",
+              bundleFootprintBytes: 2048n,
+              relatedFilesFootprintBytes: 0n,
+              combinedFootprintBytes: 2048n,
+              isRunning: true,
+              canRemove: false,
+              bundleSelectedByDefault: false,
+              removalState: "quitRequired",
+              removalExplanation:
+                "Quit this application before removing its bundle or related files.",
+              relatedFiles: [],
+            },
+          ],
+          orphans: [],
+        }}
+      />,
+    );
+
+    expect(html).toContain("Quit this application before removing");
+    expect(html).toContain('data-testid="remove-com.acme.running"');
+    expect(html).toContain("disabled");
+  });
+});
 
 describe("two-distinct-totals claim", () => {
   it("renders distinct figures for trash and freed space without summing them", () => {

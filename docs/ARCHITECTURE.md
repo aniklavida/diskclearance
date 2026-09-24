@@ -66,8 +66,8 @@ The renderer never receives unrestricted filesystem authority. It requests typed
   - Move items to Trash while preserving Put Back origin (`TrashedItem`), enumerate current Trash contents, and verify whether a previously trashed item is still present (`TrashedItemStatus`).
   - Status: **unsupported** (planned for milestone M2). Returns typed unsupported error.
 - **Application metadata:**
-  - Inspect installed bundle identifiers, version strings, install paths, and measured footprints (`ApplicationMetadata`).
-  - Status: **unsupported** (planned for milestone M3). Returns typed unsupported error.
+  - Inspect installed bundle identifiers, names, developer names, version strings, install paths, measured footprints, running state, and related state roots (`ApplicationMetadata`, `ApplicationDataRoot`).
+  - Status: **implemented and tested** on macOS. Related-file discovery reports structured reasons and strengths, protects credentials, excludes shared components, and discovers orphan leftovers.
 - **Entry metadata inspection:**
   - Inspect apparent size and allocated block footprint, file types, modification timestamps, and link counts without following symlinks into unrequested scopes (`EntryMetadata`).
   - Status on macOS: **implemented and tested**.

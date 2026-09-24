@@ -116,9 +116,33 @@ pub enum TrashedItemStatus {
 #[serde(rename_all = "camelCase")]
 pub struct ApplicationMetadata {
     pub bundle_identifier: Option<String>,
+    pub name: String,
+    pub developer_name: Option<String>,
     pub version: Option<String>,
     pub install_location: PathBuf,
     pub measured_footprint_bytes: u64,
+    pub is_system_application: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ApplicationDataRootKind {
+    ApplicationSupport,
+    Caches,
+    Preferences,
+    Containers,
+    GroupContainers,
+    SavedApplicationState,
+    Logs,
+    LaunchAgents,
+    Frameworks,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApplicationDataRoot {
+    pub path: PathBuf,
+    pub kind: ApplicationDataRootKind,
 }
 
 /// Filesystem device and inode identity.
@@ -204,7 +228,12 @@ pub trait PlatformAdapter: Send + Sync {
     ) -> Result<(), PlatformError>;
 
     // --- Application metadata ---
+    fn installed_application_bundles(&self) -> Result<Vec<PathBuf>, PlatformError>;
+    fn application_data_roots(&self) -> Result<Vec<ApplicationDataRoot>, PlatformError>;
     fn application_metadata(&self, path: &Path) -> Result<ApplicationMetadata, PlatformError>;
+    fn is_application_running(&self, path: &Path) -> bool;
+    fn application_shared_components(&self, path: &Path) -> Result<Vec<String>, PlatformError>;
+    fn path_is_owned_by_current_user(&self, path: &Path) -> bool;
 
     // --- Filesystem identity ---
     fn file_identity(&self, path: &Path) -> Result<FileIdentity, PlatformError>;
@@ -296,8 +325,28 @@ impl PlatformAdapter for UnsupportedAdapter {
         Err(PlatformError::Unsupported("restore_from_trash"))
     }
 
+    fn installed_application_bundles(&self) -> Result<Vec<PathBuf>, PlatformError> {
+        Err(PlatformError::Unsupported("installed_application_bundles"))
+    }
+
+    fn application_data_roots(&self) -> Result<Vec<ApplicationDataRoot>, PlatformError> {
+        Err(PlatformError::Unsupported("application_data_roots"))
+    }
+
     fn application_metadata(&self, _path: &Path) -> Result<ApplicationMetadata, PlatformError> {
         Err(PlatformError::Unsupported("application_metadata"))
+    }
+
+    fn is_application_running(&self, _path: &Path) -> bool {
+        false
+    }
+
+    fn application_shared_components(&self, _path: &Path) -> Result<Vec<String>, PlatformError> {
+        Err(PlatformError::Unsupported("application_shared_components"))
+    }
+
+    fn path_is_owned_by_current_user(&self, _path: &Path) -> bool {
+        false
     }
 
     fn file_identity(&self, _path: &Path) -> Result<FileIdentity, PlatformError> {
@@ -323,6 +372,107 @@ impl PlatformAdapter for UnsupportedAdapter {
     fn file_extent_offset(&self, _path: &Path, _size_bytes: u64) -> Option<i64> {
         None
     }
+}
+
+fn plist_string(value: &plist::Value, key: &str) -> Option<String> {
+    let plist::Value::Dictionary(dictionary) = value else {
+        return None;
+    };
+    match dictionary.get(key) {
+        Some(plist::Value::String(value)) => Some(value.clone()),
+        _ => None,
+    }
+}
+
+fn application_bundle_components(path: &Path) -> Result<Vec<String>, PlatformError> {
+    let frameworks = path.join("Contents/Frameworks");
+    if !frameworks.is_dir() {
+        return Ok(Vec::new());
+    }
+    let mut components = std::fs::read_dir(&frameworks)
+        .map_err(|error| PlatformError::Io(error.to_string()))?
+        .flatten()
+        .filter_map(|entry| entry.file_name().into_string().ok())
+        .filter(|name| name.ends_with(".framework") || name.ends_with(".component"))
+        .collect::<Vec<_>>();
+    components.sort();
+    Ok(components)
+}
+
+fn measure_bundle_footprint(path: &Path) -> Result<u64, PlatformError> {
+    fn visit(
+        path: &Path,
+        visited: &mut std::collections::HashSet<(u64, u64)>,
+        total: &mut u64,
+    ) -> Result<(), PlatformError> {
+        let metadata = std::fs::symlink_metadata(path).map_err(|error| match error.kind() {
+            std::io::ErrorKind::NotFound => PlatformError::NotFound(path.to_path_buf()),
+            _ => PlatformError::Io(error.to_string()),
+        })?;
+        #[cfg(unix)]
+        let identity = {
+            use std::os::unix::fs::MetadataExt;
+            (metadata.dev(), metadata.ino())
+        };
+        #[cfg(not(unix))]
+        let identity = (0_u64, metadata.len());
+        if !visited.insert(identity) {
+            return Ok(());
+        }
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::MetadataExt;
+            *total = total.saturating_add(metadata.blocks().saturating_mul(512));
+        }
+        #[cfg(not(unix))]
+        {
+            *total = total.saturating_add(metadata.len());
+        }
+        if metadata.file_type().is_symlink() || !metadata.is_dir() {
+            return Ok(());
+        }
+        for entry in std::fs::read_dir(path)
+            .map_err(|error| PlatformError::Io(error.to_string()))?
+            .flatten()
+        {
+            visit(&entry.path(), visited, total)?;
+        }
+        Ok(())
+    }
+
+    let mut total = 0_u64;
+    visit(path, &mut std::collections::HashSet::new(), &mut total)?;
+    Ok(total)
+}
+
+fn inspect_application_bundle(path: &Path) -> Result<ApplicationMetadata, PlatformError> {
+    let info_path = path.join("Contents/Info.plist");
+    let plist = plist::Value::from_file(&info_path).map_err(|error| {
+        PlatformError::MetadataError(format!("failed to read {}: {error}", info_path.display()))
+    })?;
+    let bundle_identifier = plist_string(&plist, "CFBundleIdentifier");
+    let name = plist_string(&plist, "CFBundleName").or_else(|| {
+        path.file_stem()
+            .map(|name| name.to_string_lossy().trim_end_matches(".app").to_string())
+    });
+    let developer_name = plist_string(&plist, "CFBundleDeveloperName");
+    let version = plist_string(&plist, "CFBundleShortVersionString")
+        .or_else(|| plist_string(&plist, "CFBundleVersion"));
+    let is_system_application = path.starts_with("/System/Applications")
+        || bundle_identifier
+            .as_deref()
+            .is_some_and(|identifier| identifier.starts_with("com.apple."));
+    let measured_footprint_bytes = measure_bundle_footprint(path)?;
+
+    Ok(ApplicationMetadata {
+        bundle_identifier,
+        name: name.unwrap_or_else(|| "Unknown application".to_string()),
+        developer_name,
+        version,
+        install_location: path.to_path_buf(),
+        measured_footprint_bytes,
+        is_system_application,
+    })
 }
 
 #[cfg(target_os = "macos")]
@@ -591,10 +741,113 @@ function run(argv) {
             .map_err(|e| PlatformError::Io(e.to_string()))
     }
 
-    fn application_metadata(&self, _path: &Path) -> Result<ApplicationMetadata, PlatformError> {
-        Err(PlatformError::Unsupported(
-            "application_metadata is scheduled for M3 and unsupported in M0/M1",
-        ))
+    fn installed_application_bundles(&self) -> Result<Vec<PathBuf>, PlatformError> {
+        let mut roots = vec![PathBuf::from("/Applications")];
+        if let Ok(home) = self.home_directory() {
+            roots.push(home.path.join("Applications"));
+        }
+        let mut bundles = Vec::new();
+        for root in roots {
+            let Ok(entries) = std::fs::read_dir(&root) else {
+                continue;
+            };
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.extension().and_then(|value| value.to_str()) != Some("app") {
+                    continue;
+                }
+                let Ok(file_type) = entry.file_type() else {
+                    continue;
+                };
+                if file_type.is_dir() && !file_type.is_symlink() {
+                    bundles.push(path);
+                }
+            }
+        }
+        bundles.sort();
+        Ok(bundles)
+    }
+
+    fn application_data_roots(&self) -> Result<Vec<ApplicationDataRoot>, PlatformError> {
+        let home = self.home_directory()?.path;
+        let library = home.join("Library");
+        Ok(vec![
+            ApplicationDataRoot {
+                path: library.join("Application Support"),
+                kind: ApplicationDataRootKind::ApplicationSupport,
+            },
+            ApplicationDataRoot {
+                path: library.join("Caches"),
+                kind: ApplicationDataRootKind::Caches,
+            },
+            ApplicationDataRoot {
+                path: library.join("Preferences"),
+                kind: ApplicationDataRootKind::Preferences,
+            },
+            ApplicationDataRoot {
+                path: library.join("Containers"),
+                kind: ApplicationDataRootKind::Containers,
+            },
+            ApplicationDataRoot {
+                path: library.join("Group Containers"),
+                kind: ApplicationDataRootKind::GroupContainers,
+            },
+            ApplicationDataRoot {
+                path: library.join("Saved Application State"),
+                kind: ApplicationDataRootKind::SavedApplicationState,
+            },
+            ApplicationDataRoot {
+                path: library.join("Logs"),
+                kind: ApplicationDataRootKind::Logs,
+            },
+            ApplicationDataRoot {
+                path: library.join("LaunchAgents"),
+                kind: ApplicationDataRootKind::LaunchAgents,
+            },
+            ApplicationDataRoot {
+                path: library.join("Frameworks"),
+                kind: ApplicationDataRootKind::Frameworks,
+            },
+        ])
+    }
+
+    fn application_metadata(&self, path: &Path) -> Result<ApplicationMetadata, PlatformError> {
+        inspect_application_bundle(path)
+    }
+
+    fn is_application_running(&self, path: &Path) -> bool {
+        let Ok(metadata) = inspect_application_bundle(path) else {
+            return false;
+        };
+        let Some(bundle_identifier) = metadata.bundle_identifier else {
+            return false;
+        };
+        let script = r#"ObjC.import("AppKit");
+function run(argv) {
+    var apps = $.NSRunningApplication.runningApplicationsWithBundleIdentifier($.NSString.stringWithString(argv[0]));
+    return apps.count > 0 ? "true" : "false";
+}"#;
+        std::process::Command::new("/usr/bin/osascript")
+            .args(["-l", "JavaScript", "-e", script])
+            .arg(bundle_identifier)
+            .output()
+            .map(|output| output.status.success() && output.stdout == b"true\n")
+            .unwrap_or(false)
+    }
+
+    fn application_shared_components(&self, path: &Path) -> Result<Vec<String>, PlatformError> {
+        application_bundle_components(path)
+    }
+
+    fn path_is_owned_by_current_user(&self, path: &Path) -> bool {
+        use std::os::unix::fs::MetadataExt;
+        let Ok(metadata) = std::fs::symlink_metadata(path) else {
+            return false;
+        };
+        unsafe extern "C" {
+            fn geteuid() -> u32;
+        }
+        metadata.uid() == unsafe { geteuid() }
     }
 
     fn file_identity(&self, path: &Path) -> Result<FileIdentity, PlatformError> {
@@ -821,10 +1074,36 @@ impl PlatformAdapter for WindowsAdapter {
         Err(PlatformError::Unsupported("restore_from_trash on Windows"))
     }
 
+    fn installed_application_bundles(&self) -> Result<Vec<PathBuf>, PlatformError> {
+        Err(PlatformError::Unsupported(
+            "installed_application_bundles on Windows",
+        ))
+    }
+
+    fn application_data_roots(&self) -> Result<Vec<ApplicationDataRoot>, PlatformError> {
+        Err(PlatformError::Unsupported(
+            "application_data_roots on Windows",
+        ))
+    }
+
     fn application_metadata(&self, _path: &Path) -> Result<ApplicationMetadata, PlatformError> {
         Err(PlatformError::Unsupported(
             "application_metadata on Windows",
         ))
+    }
+
+    fn is_application_running(&self, _path: &Path) -> bool {
+        false
+    }
+
+    fn application_shared_components(&self, _path: &Path) -> Result<Vec<String>, PlatformError> {
+        Err(PlatformError::Unsupported(
+            "application_shared_components on Windows",
+        ))
+    }
+
+    fn path_is_owned_by_current_user(&self, _path: &Path) -> bool {
+        false
     }
 
     fn file_identity(&self, _path: &Path) -> Result<FileIdentity, PlatformError> {
@@ -930,6 +1209,9 @@ pub mod tests {
         pub scan_roots: Vec<ScanRoot>,
         pub permissions: Arc<Mutex<HashMap<PathBuf, ScopePermission>>>,
         pub trashed_items: Arc<Mutex<Vec<TrashedItem>>>,
+        pub application_bundles: Arc<Mutex<Vec<PathBuf>>>,
+        pub application_data_roots: Arc<Mutex<Vec<ApplicationDataRoot>>>,
+        pub running_applications: Arc<Mutex<Vec<PathBuf>>>,
         pub application_metadata_map: Arc<Mutex<HashMap<PathBuf, ApplicationMetadata>>>,
         pub identities: Arc<Mutex<HashMap<PathBuf, FileIdentity>>>,
         pub resolved_paths: Arc<Mutex<HashMap<PathBuf, ResolvedPath>>>,
@@ -976,6 +1258,9 @@ pub mod tests {
                 scan_roots,
                 permissions: Arc::new(Mutex::new(HashMap::new())),
                 trashed_items: Arc::new(Mutex::new(Vec::new())),
+                application_bundles: Arc::new(Mutex::new(Vec::new())),
+                application_data_roots: Arc::new(Mutex::new(Vec::new())),
+                running_applications: Arc::new(Mutex::new(Vec::new())),
                 application_metadata_map: Arc::new(Mutex::new(HashMap::new())),
                 identities: Arc::new(Mutex::new(HashMap::new())),
                 resolved_paths: Arc::new(Mutex::new(HashMap::new())),
@@ -986,6 +1271,29 @@ pub mod tests {
     }
 
     impl TestAdapter {
+        pub fn with_home(mut self, home: PathBuf) -> Self {
+            self.app_support = home.join("Library/Application Support");
+            self.caches = home.join("Library/Caches");
+            self.trash = home.join(".Trash");
+            self.home = home;
+            self
+        }
+
+        pub fn with_application_bundles(self, bundles: Vec<PathBuf>) -> Self {
+            *self.application_bundles.lock().unwrap() = bundles;
+            self
+        }
+
+        pub fn with_application_data_roots(self, roots: Vec<ApplicationDataRoot>) -> Self {
+            *self.application_data_roots.lock().unwrap() = roots;
+            self
+        }
+
+        pub fn with_running_applications(self, bundles: Vec<PathBuf>) -> Self {
+            *self.running_applications.lock().unwrap() = bundles;
+            self
+        }
+
         pub fn with_permission(
             self,
             scope: PathBuf,
@@ -1170,12 +1478,36 @@ pub mod tests {
             Ok(())
         }
 
+        fn installed_application_bundles(&self) -> Result<Vec<PathBuf>, PlatformError> {
+            Ok(self.application_bundles.lock().unwrap().clone())
+        }
+
+        fn application_data_roots(&self) -> Result<Vec<ApplicationDataRoot>, PlatformError> {
+            Ok(self.application_data_roots.lock().unwrap().clone())
+        }
+
         fn application_metadata(&self, path: &Path) -> Result<ApplicationMetadata, PlatformError> {
             if let Some(meta) = self.application_metadata_map.lock().unwrap().get(path) {
                 Ok(meta.clone())
             } else {
-                Err(PlatformError::NotFound(path.to_path_buf()))
+                inspect_application_bundle(path)
             }
+        }
+
+        fn is_application_running(&self, path: &Path) -> bool {
+            self.running_applications
+                .lock()
+                .unwrap()
+                .iter()
+                .any(|running| running == path)
+        }
+
+        fn application_shared_components(&self, path: &Path) -> Result<Vec<String>, PlatformError> {
+            application_bundle_components(path)
+        }
+
+        fn path_is_owned_by_current_user(&self, path: &Path) -> bool {
+            path.exists() || path.is_symlink()
         }
 
         fn file_identity(&self, path: &Path) -> Result<FileIdentity, PlatformError> {
@@ -1494,6 +1826,14 @@ pub mod tests {
         assert_eq!(
             adapter.restore_from_trash(Path::new("/dummy/trash"), Path::new("/dummy/dest")),
             Err(PlatformError::Unsupported("restore_from_trash"))
+        );
+        assert_eq!(
+            adapter.installed_application_bundles(),
+            Err(PlatformError::Unsupported("installed_application_bundles"))
+        );
+        assert_eq!(
+            adapter.application_data_roots(),
+            Err(PlatformError::Unsupported("application_data_roots"))
         );
         assert_eq!(
             adapter.application_metadata(Path::new("/dummy.app")),

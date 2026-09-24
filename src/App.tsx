@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import {
+  invokeFetchApplicationInventory,
   invokeFetchHistoryOperations,
   invokeFetchLifetimeReclamationTotals,
   invokeFetchOperationDetail,
   invokeRestoreItem,
 } from "./boundary/client";
 import type {
+  ApplicationInventory,
   FolderAggregate,
   FolderAggregateEntry,
   HistoryOperationDetail,
@@ -107,7 +109,6 @@ export default function App() {
               key={item.name}
               className={`nav-item ${activeTab === item.name ? "active" : ""}`}
               type="button"
-              disabled={item.name === "Applications"}
               aria-current={activeTab === item.name ? "page" : undefined}
               onClick={() => setActiveTab(item.name)}
             >
@@ -115,7 +116,6 @@ export default function App() {
                 {item.icon}
               </span>
               <span className="nav-label">{item.name}</span>
-              {item.name === "Applications" && <small>Planned</small>}
             </button>
           ))}
         </nav>
@@ -125,12 +125,229 @@ export default function App() {
           {foundation.status}
         </div>
         {activeTab === "Home" && <HomeTab report={report} />}
+        {activeTab === "Applications" && <ApplicationsTab />}
         {activeTab === "Cleanup" && <CleanupTab />}
         {activeTab === "Explore" && <ExploreTab />}
         {activeTab === "History" && <HistoryTab />}
       </section>
     </main>
   );
+}
+
+export function ApplicationsTab({
+  initialInventory,
+}: {
+  initialInventory?: ApplicationInventory;
+} = {}) {
+  const [inventory, setInventory] = useState<ApplicationInventory | null>(
+    initialInventory ?? null,
+  );
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (!initialInventory) {
+      invokeFetchApplicationInventory()
+        .then(setInventory)
+        .catch((error) =>
+          setErrorMessage(
+            typeof error === "string"
+              ? error
+              : (error?.reason ?? "Application inventory is unavailable"),
+          ),
+        );
+    }
+  }, [initialInventory]);
+
+  if (errorMessage) {
+    return (
+      <div
+        className="applications-tab"
+        data-testid="applications-error"
+        role="alert"
+      >
+        {errorMessage}
+      </div>
+    );
+  }
+
+  if (!inventory) {
+    return (
+      <div
+        className="applications-tab"
+        data-testid="applications-loading"
+        role="status"
+      >
+        Measuring installed applications and scanning related files…
+      </div>
+    );
+  }
+
+  if (inventory.applications.length === 0 && inventory.orphans.length === 0) {
+    return (
+      <div className="applications-tab" data-testid="applications-empty">
+        No measurable applications or related leftovers were found.
+      </div>
+    );
+  }
+
+  return (
+    <div className="applications-tab" data-testid="applications-tab">
+      <header className="applications-header">
+        <h2>Applications</h2>
+        <p className="lede">
+          Bundle size and related files are measured separately. Review every
+          evidence match before including it in a removal plan.
+        </p>
+      </header>
+      <ul className="application-list" aria-label="Installed applications">
+        {inventory.applications.map((application) => (
+          <li className="application-card" key={application.installPath}>
+            <div className="application-card-header">
+              <div>
+                <h3>{application.name}</h3>
+                <p className="application-meta">
+                  {application.bundleId ?? "Bundle identifier unavailable"} ·{" "}
+                  {application.version ?? "Version unavailable"}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={!application.canRemove}
+                data-testid={`remove-${application.bundleId ?? application.name}`}
+              >
+                Review removal
+              </button>
+            </div>
+            <div className="application-footprint-grid">
+              <div>
+                <span className="card-label">Application bundle</span>
+                <strong>{formatBytes(application.bundleFootprintBytes)}</strong>
+              </div>
+              <div>
+                <span className="card-label">Related files</span>
+                <strong>
+                  {formatBytes(application.relatedFilesFootprintBytes)}
+                </strong>
+              </div>
+              <div>
+                <span className="card-label">Combined measured footprint</span>
+                <strong>
+                  {formatBytes(application.combinedFootprintBytes)}
+                </strong>
+              </div>
+            </div>
+            <p
+              className={`application-removal-state ${application.isRunning ? "running" : "ready"}`}
+              data-testid={`removal-state-${application.bundleId ?? application.name}`}
+            >
+              {application.removalExplanation}
+            </p>
+            <RelatedFiles
+              files={application.relatedFiles}
+              selected={selected}
+              onToggle={(path) =>
+                setSelected((current) => ({
+                  ...current,
+                  [path]: !current[path],
+                }))
+              }
+            />
+          </li>
+        ))}
+      </ul>
+      {inventory.orphans.length > 0 && (
+        <section className="orphans-section" aria-labelledby="orphan-heading">
+          <h3 id="orphan-heading">
+            Leftovers without an installed application
+          </h3>
+          <p>
+            These exact bundle-identifier matches remain Review and unselected
+            because the owning application is absent.
+          </p>
+          <RelatedFiles
+            files={inventory.orphans}
+            selected={selected}
+            onToggle={(path) =>
+              setSelected((current) => ({ ...current, [path]: !current[path] }))
+            }
+          />
+        </section>
+      )}
+    </div>
+  );
+}
+
+function RelatedFiles({
+  files,
+  selected,
+  onToggle,
+}: {
+  files: ApplicationInventory["applications"][number]["relatedFiles"];
+  selected: Record<string, boolean>;
+  onToggle: (path: string) => void;
+}) {
+  if (files.length === 0) {
+    return <p className="application-empty-related">No related files found.</p>;
+  }
+  return (
+    <ul className="related-file-list" aria-label="Related application files">
+      {files.map((file) => {
+        const key = file.path;
+        const isSelected = selected[key] ?? file.selectedByDefault;
+        const isDisabled =
+          file.safetyClass === "protected" || !file.offeredForRemoval;
+        return (
+          <li className="related-file" key={file.path}>
+            <label>
+              <input
+                type="checkbox"
+                checked={isSelected}
+                disabled={isDisabled}
+                onChange={() => onToggle(file.path)}
+                aria-label={`Select related file ${file.name}`}
+              />
+              <span className="related-file-name">{file.name}</span>
+            </label>
+            <span className="storage-figure">
+              {formatBytes(file.measuredFootprintBytes)}
+            </span>
+            <span className={`safety-badge ${file.safetyClass}`}>
+              {file.safetyClass === "rebuildable"
+                ? "Rebuildable"
+                : file.safetyClass === "review"
+                  ? "Review"
+                  : "Protected"}
+            </span>
+            <div className="related-evidence">
+              <strong>{evidenceLabel(file.evidence.reason)}</strong>
+              <span> · {evidenceStrengthLabel(file.evidence.strength)}</span>
+              <span> · {file.evidence.explanation}</span>
+            </div>
+            {!file.offeredForRemoval && (
+              <span className="related-exclusion">Not offered for removal</span>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function evidenceLabel(reason: string): string {
+  if (reason === "exactBundleIdentifier") return "Matched by bundle identifier";
+  if (reason === "developerDirectory") return "Developer directory match";
+  if (reason === "similarName") return "Name looks similar";
+  if (reason === "sensitiveCredential") return "Protected credential";
+  return "Shared component";
+}
+
+function evidenceStrengthLabel(strength: string): string {
+  if (strength === "strong") return "strong evidence";
+  if (strength === "weak") return "weak evidence";
+  if (strength === "guess") return "guess, review required";
+  return "excluded from removal";
 }
 
 export function HomeTab({

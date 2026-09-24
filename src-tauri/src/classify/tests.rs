@@ -12,9 +12,9 @@ use crate::classify::plan::{
 };
 use crate::classify::protected::PROTECTED_ROOTS;
 use crate::platform::{
-    DiscoveredPath, EntryMetadata, EntryType, FileIdentity, MountBoundary, PathKind,
-    PlatformAdapter, PlatformError, ResolvedPath, ScanRoot, ScopePermission, SettingsDestination,
-    TrashedItem, TrashedItemStatus,
+    ApplicationDataRoot, DiscoveredPath, EntryMetadata, EntryType, FileIdentity, MountBoundary,
+    PathKind, PlatformAdapter, PlatformError, ResolvedPath, ScanRoot, ScopePermission,
+    SettingsDestination, TrashedItem, TrashedItemStatus,
 };
 use crate::scan::fixtures::DisposableFixtureTree;
 
@@ -179,11 +179,31 @@ impl PlatformAdapter for ClassificationTestAdapter {
             .map_err(|e| PlatformError::Io(e.to_string()))
     }
 
+    fn installed_application_bundles(&self) -> Result<Vec<PathBuf>, PlatformError> {
+        Ok(Vec::new())
+    }
+
+    fn application_data_roots(&self) -> Result<Vec<ApplicationDataRoot>, PlatformError> {
+        Ok(Vec::new())
+    }
+
     fn application_metadata(
         &self,
         path: &Path,
     ) -> Result<crate::platform::ApplicationMetadata, PlatformError> {
         Err(PlatformError::NotFound(path.to_path_buf()))
+    }
+
+    fn is_application_running(&self, _path: &Path) -> bool {
+        false
+    }
+
+    fn application_shared_components(&self, _path: &Path) -> Result<Vec<String>, PlatformError> {
+        Ok(Vec::new())
+    }
+
+    fn path_is_owned_by_current_user(&self, _path: &Path) -> bool {
+        true
     }
 
     fn file_identity(&self, path: &Path) -> Result<FileIdentity, PlatformError> {
