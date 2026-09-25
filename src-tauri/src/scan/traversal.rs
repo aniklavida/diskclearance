@@ -395,7 +395,7 @@ where
 mod tests {
     use super::*;
     use std::sync::Arc;
-    use std::sync::atomic::AtomicBool;
+    use std::sync::atomic::{AtomicBool, AtomicU64};
     use std::time::Instant;
 
     use crate::platform::tests::TestAdapter;
@@ -661,71 +661,107 @@ mod tests {
         );
     }
 
+    #[cfg(unix)]
     #[test]
-    fn test_scanning_100k_entries_keeps_peak_memory_flat_relative_to_10k_entries() {
-        // High-water mark memory verification:
-        // We measure live in-memory entry records held by the streaming pipeline.
-        // For a streaming pipeline, live records at any instant is bounded by O(1) buffer size.
-        let fixture_10k = DisposableFixtureTree::new("mem-10k");
-        let root_10k = fixture_10k.create_dir("root");
-        for i in 0..10_000 {
-            fixture_10k.create_file(&format!("root/file_{i}.txt"), b"x");
-        }
+    fn test_scanning_1m_entries_keeps_peak_memory_flat_relative_to_10k_entries() {
+        use crate::performance::{FlatFixture, peak_resident_bytes};
 
-        let tracker_10k = MemoryTracker::new();
-        let token = CancellationToken::new();
         let adapter = TestAdapter::default();
-
+        let token = CancellationToken::new();
+        let fixture_10k = FlatFixture::new("mem-10k", 10_000);
+        let tracker_10k = MemoryTracker::new();
         let _ = walk_roots(
             TraversalOptions {
                 session_id: "mem-10k".into(),
-                roots: vec![root_10k],
+                roots: vec![fixture_10k.root.clone()],
                 adapter: &adapter,
                 cancellation_token: &token,
                 tracker: Some(&tracker_10k),
                 hooks: None,
-                collect_entries: false, // stream without retaining whole tree
+                collect_entries: false,
             },
             |_| {},
             |_| {},
             |_| {},
         );
-        let peak_10k = tracker_10k.peak();
+        let peak_records_10k = tracker_10k.peak();
+        let peak_rss_10k = peak_resident_bytes();
+        drop(fixture_10k);
 
-        let fixture_100k = DisposableFixtureTree::new("mem-100k");
-        let root_100k = fixture_100k.create_dir("root");
-        for i in 0..100_000 {
-            fixture_100k.create_file(&format!("root/file_{i}.txt"), b"x");
-        }
-
-        let tracker_100k = MemoryTracker::new();
+        let fixture_1m = FlatFixture::new("mem-1m", 1_000_000);
+        let tracker_1m = MemoryTracker::new();
         let _ = walk_roots(
             TraversalOptions {
-                session_id: "mem-100k".into(),
-                roots: vec![root_100k],
+                session_id: "mem-1m".into(),
+                roots: vec![fixture_1m.root.clone()],
                 adapter: &adapter,
                 cancellation_token: &token,
-                tracker: Some(&tracker_100k),
+                tracker: Some(&tracker_1m),
                 hooks: None,
-                collect_entries: false, // stream without retaining whole tree
+                collect_entries: false,
             },
             |_| {},
             |_| {},
             |_| {},
         );
-        let peak_100k = tracker_100k.peak();
+        let peak_records_1m = tracker_1m.peak();
+        let peak_rss_1m = peak_resident_bytes();
 
-        // Prove peak live records in memory is flat between 10k and 100k
-        assert_eq!(
-            peak_10k, peak_100k,
-            "Peak in-memory records must remain flat (10k had {peak_10k}, 100k had {peak_100k})"
-        );
-        assert_eq!(
-            peak_100k, 1,
-            "Peak live record count in streaming pipeline is exactly 1"
-        );
+        assert_eq!(peak_records_10k, 1);
+        assert_eq!(peak_records_1m, 1);
+        assert_eq!(peak_records_10k, peak_records_1m);
+        if let (Some(rss_10k), Some(rss_1m)) = (peak_rss_10k, peak_rss_1m) {
+            assert!(
+                rss_1m <= rss_10k + 32 * 1024 * 1024,
+                "peak resident memory must remain flat: 10k={rss_10k}, 1m={rss_1m}"
+            );
+        }
     }
 
+    #[test]
+    fn test_cancellation_returns_promptly_from_a_100k_entry_fixture() {
+        use crate::performance::FlatFixture;
+
+        let fixture = FlatFixture::new("cancel-large", 100_000);
+        let adapter = TestAdapter::default();
+        let token = CancellationToken::new();
+        let worker_token = token.clone();
+        let verified = Arc::new(AtomicU64::new(0));
+        let worker_verified = Arc::clone(&verified);
+        let root = fixture.root.clone();
+
+        let handle = std::thread::spawn(move || {
+            walk_roots(
+                TraversalOptions {
+                    session_id: "cancel-large".into(),
+                    roots: vec![root],
+                    adapter: &adapter,
+                    cancellation_token: &worker_token,
+                    tracker: None,
+                    hooks: None,
+                    collect_entries: false,
+                },
+                |_| {},
+                move |_| {
+                    worker_verified.fetch_add(1, Ordering::SeqCst);
+                },
+                |_| {},
+            )
+        });
+
+        while verified.load(Ordering::SeqCst) < 100_000 && !handle.is_finished() {
+            std::thread::sleep(std::time::Duration::from_millis(1));
+        }
+        let cancellation_started = Instant::now();
+        token.cancel();
+        let result = handle.join().expect("large scan thread join");
+        let cancellation_latency = cancellation_started.elapsed();
+
+        assert!(verified.load(Ordering::SeqCst) >= 100_000);
+        assert!(result.coverage.items_scanned < 101_000);
+        assert!(!result.coverage.is_complete);
+        assert!(cancellation_latency.as_millis() < 500);
+    }
     #[test]
     fn test_no_test_touches_any_path_outside_its_temporary_directory() {
         let fixture = DisposableFixtureTree::new("isolated-guard");
