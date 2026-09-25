@@ -1192,6 +1192,54 @@ pub fn current_platform_name() -> &'static str {
     CURRENT_ADAPTER.platform_name()
 }
 
+pub fn peak_resident_bytes() -> Option<u64> {
+    #[cfg(target_os = "macos")]
+    {
+        use std::mem::MaybeUninit;
+
+        #[repr(C)]
+        struct Timeval {
+            seconds: i64,
+            microseconds: i64,
+        }
+
+        #[repr(C)]
+        struct Rusage {
+            user_time: Timeval,
+            system_time: Timeval,
+            max_resident: i64,
+            input_resident: i64,
+            output_resident: i64,
+            page_faults: i64,
+            page_faults_recoverable: i64,
+            page_faults_unrecoverable: i64,
+            swaps: i64,
+            block_input: i64,
+            block_output: i64,
+            messages_sent: i64,
+            messages_received: i64,
+            signals: i64,
+            voluntary_context_switches: i64,
+            involuntary_context_switches: i64,
+        }
+
+        unsafe extern "C" {
+            fn getrusage(who: i32, usage: *mut Rusage) -> i32;
+        }
+
+        let mut usage = MaybeUninit::<Rusage>::uninit();
+        let result = unsafe { getrusage(0, usage.as_mut_ptr()) };
+        if result != 0 {
+            return None;
+        }
+        Some(unsafe { usage.assume_init().max_resident.max(0) as u64 })
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        None
+    }
+}
+
 #[cfg(test)]
 pub mod tests {
     use super::*;

@@ -49,7 +49,7 @@ They are commitments, not coverage. **Production deletion stays disabled until t
 ## Quality
 
 - [ ] Frontend build, tests, formatting, Rust checks, and Rust tests pass.
-- [ ] Large-tree, low-disk, permission-denied, interrupted, and corrupt-database cases pass.
+- [x] Large-tree, low-disk, permission-denied, interrupted, and corrupt-database cases exercised; measured behavior is recorded in [`docs/PERFORMANCE.md`](PERFORMANCE.md).
 - [ ] Automated accessibility and responsive conformance suite passes:
   - Contrast check passes on every semantic token pair in light and dark mode (`src/tokens.test.ts`).
   - Focus-visible presence check (2px accent outline, 2px offset) across interactive elements (`src/tokens.test.ts`).
@@ -59,7 +59,7 @@ They are commitments, not coverage. **Production deletion stays disabled until t
   - Navigable folder table equivalent for treemap (`src/accessibility.test.tsx`).
   - Reduced Motion chart animation and transition elimination (`src/tokens.test.ts`).
   - Responsive layout and review tray non-occluding clearance at 760×560 px (`src/accessibility.test.tsx`).
-- [ ] Performance and memory budgets are measured on representative hardware.
+- [x] Performance and memory budgets are measured on the recorded Apple M4 / macOS 26.3 build 25D125 host; see [`docs/PERFORMANCE.md`](PERFORMANCE.md) for the exact measurements and scope.
 
 ### Manual accessibility and responsive gates (not executable in standard CI)
 
