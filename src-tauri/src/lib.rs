@@ -3,6 +3,7 @@ pub mod boundary;
 pub mod classify;
 pub mod duplicates;
 pub mod foundation;
+pub mod performance;
 pub mod platform;
 pub mod scan;
 pub mod storage;
