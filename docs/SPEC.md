@@ -76,6 +76,7 @@ DiskClearance helps people understand what consumes storage, decide what is safe
 - Secure-overwrite promises on SSDs.
 - Similar-image or fuzzy duplicate deletion.
 - Windows or Linux support in the first release.
+- **No privileged helper.** v1.0 ships no elevated-permission component. A finding that is owned by root or otherwise requires administrator privileges to remove — some `/Library` leftovers from installers that ran as root, certain system-level caches — is shown with evidence and explained as outside v1.0's scope, never actioned. This is a deliberate decision, not an oversight: a component that deletes files with elevated privileges is the highest-risk thing this project could build, and the market precedent is a real one — a dozen root-access vulnerabilities were found in a competitor's privileged-helper protocol. Revisiting this is possible for a later release, decided against measured evidence of how much space and how many users this actually affects, not before.
 
 ## v1.0 acceptance
 

@@ -41,6 +41,8 @@ The repository currently contains only the validated project foundation. See [th
 
 DiskClearance handles destructive filesystem operations. Security or data-loss issues should not be filed publicly; follow [SECURITY.md](SECURITY.md). No release should be trusted with real files until the release checklist and destructive-operation test suite pass.
 
+DiskClearance ships no privileged helper and requests no elevated permissions. A finding that would require administrator privileges to remove is shown with evidence and marked as outside v1.0's scope — never actioned. **Unsupported** in v1.0.
+
 ## Contributing
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md). The project is licensed under the [MIT License](LICENSE).
