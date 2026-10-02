@@ -219,6 +219,11 @@ impl PlatformAdapter for ClassificationTestAdapter {
         }
         #[cfg(not(unix))]
         {
+            // No portable equivalent of `st_dev`/`st_ino` here, so report the
+            // capability as unsupported rather than inventing an identity. A
+            // missing path still reports as missing rather than unsupported.
+            std::fs::symlink_metadata(path)
+                .map_err(|_| PlatformError::NotFound(path.to_path_buf()))?;
             Err(PlatformError::Unsupported(
                 "filesystem identity (device_id and inode) is not available on this platform",
             ))
