@@ -52,6 +52,9 @@ pub struct DuplicateItem {
 }
 
 impl DuplicateItem {
+    // A plain constructor that mirrors every field of the record; grouping the
+    // arguments would only add a one-use wrapper type.
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         id: String,
         path: PathBuf,
@@ -103,8 +106,7 @@ impl std::fmt::Display for DuplicatePlanError {
             Self::EntireGroupSelected { group_id } => {
                 write!(
                     f,
-                    "Cannot select all copies in group '{}'; at least the retained original must remain",
-                    group_id
+                    "Cannot select all copies in group '{group_id}'; at least the retained original must remain"
                 )
             }
             Self::StorageSharingItemNotDeletable { group_id, path } => {
@@ -116,14 +118,10 @@ impl std::fmt::Display for DuplicatePlanError {
                 )
             }
             Self::ItemNotFound { group_id, item_id } => {
-                write!(
-                    f,
-                    "Item '{}' was not found in group '{}'",
-                    item_id, group_id
-                )
+                write!(f, "Item '{item_id}' was not found in group '{group_id}'")
             }
             Self::NoItemsSelected { group_id } => {
-                write!(f, "No items were selected in group '{}'", group_id)
+                write!(f, "No items were selected in group '{group_id}'")
             }
         }
     }

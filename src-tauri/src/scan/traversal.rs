@@ -395,7 +395,10 @@ where
 mod tests {
     use super::*;
     use std::sync::Arc;
-    use std::sync::atomic::{AtomicBool, AtomicU64};
+    use std::sync::atomic::AtomicBool;
+    // Only the Unix-only cancellation-latency test counts verified entries.
+    #[cfg(unix)]
+    use std::sync::atomic::AtomicU64;
     use std::time::Instant;
 
     use crate::platform::tests::TestAdapter;
@@ -718,6 +721,12 @@ mod tests {
         }
     }
 
+    // Unix-only: the assertion is that the walk is still in flight when the
+    // cancellation lands. A Windows filesystem returns from a flat-directory
+    // walk too quickly for that premise to hold, so the walk completes and the
+    // test reports a coverage the cancellation never had a chance to interrupt.
+    // Like the memory test above, it stays a timing measurement on Unix only.
+    #[cfg(unix)]
     #[test]
     fn test_cancellation_returns_promptly_from_a_100k_entry_fixture() {
         use crate::performance::FlatFixture;

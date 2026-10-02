@@ -968,11 +968,20 @@ pub fn fetch_lifetime_reclamation_totals(
 #[cfg(test)]
 mod tests {
     use super::*;
+    // Every test below that executes a plan action needs POSIX filesystem
+    // identity and platform Trash semantics, so it is Unix-only, and these
+    // imports exist solely for those tests.
+    #[cfg(unix)]
     use crate::boundary::destructive::{ExecutePlanArgs, execute_plan_core};
+    #[cfg(unix)]
     use crate::boundary::plan::{BuildPlanArgs, build_plan_core};
+    #[cfg(unix)]
     use crate::platform::tests::TestAdapter;
+    #[cfg(unix)]
     use crate::scan::fixtures::DisposableFixtureTree;
+    #[cfg(unix)]
     use crate::scan::session::ScanSessionRepository;
+    #[cfg(unix)]
     use crate::storage::open_database_at_path;
 
     // Test 1: Operations and per-item outcomes persist across an application restart.
