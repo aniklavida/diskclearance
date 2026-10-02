@@ -115,17 +115,17 @@ At minimum width (`760 × 560 px`), the tray reflows into a two-row structured b
 
 The review tray uses raised surface elevation to delineate itself from the scrollable list:
 
-- **Surface backdrop:** `--surface-raised` (`#ffffff` light / `#2a3632` dark).
-- **Border top:** 1px solid `--divider` (`#dfe5e2` light / `#2e3a36` dark).
+- **Surface backdrop:** `--surface-raised` (`#ffffff` light / `#212525` dark).
+- **Border top:** 1px solid `--divider` (`#dadfdf` light / `#2d3131` dark).
 - **Box shadow:** `0 -4px 16px rgba(0, 0, 0, 0.04)` light / `0 -4px 16px rgba(0, 0, 0, 0.24)` dark.
 - **Primary action button (`Move to Trash…`):**
-  - Background: `--accent` (`#3f7567` light / `#82b8a8` dark).
-  - Text: `#ffffff` light / `#19211f` dark (WCAG AA compliant contrast > 4.5:1).
+  - Background: `--accent` (`#118186` light / `#49a9ae` dark).
+  - Text: `#ffffff` light / `#0c1010` dark (WCAG AA compliant contrast > 4.5:1).
   - Minimum height: `var(--target-primary)` (`40px`).
   - Border-radius: `var(--radius-control)` (`8px`).
 - **Clear selection control:**
-  - Text: `--text-secondary` (`#5e6d68` light / `#9eaca6` dark).
-  - Hover state: `--text-primary` (`#21312d` light / `#e4ece8` dark) with underline.
+  - Text: `--text-secondary` (`#5a5f5f` light / `#a0a6a6` dark).
+  - Hover state: `--text-primary` (`#181b1b` light / `#e5e9e9` dark) with underline.
 - **Figures:** `font-variant-numeric: tabular-nums;` via `--text-primary`.
 
 ---
@@ -634,20 +634,20 @@ All colours and visual styles use the semantic design tokens defined in `src/App
 
 | Token Name                | Light Appearance | Dark Appearance | Component Role                                           |
 | :------------------------ | :--------------- | :-------------- | :------------------------------------------------------- |
-| `--window`                | `#f4f2ec`        | `#19211f`       | Window canvas background, modal backdrop scrim           |
-| `--surface`               | `#faf9f5`        | `#222c29`       | Review list background, summary container                |
-| `--surface-raised`        | `#ffffff`        | `#2a3632`       | Review tray surface, confirmation sheet body             |
-| `--divider`               | `#dfe5e2`        | `#2e3a36`       | Tray top border, modal header separator                  |
-| `--text-primary`          | `#21312d`        | `#e4ece8`       | Primary headlines, tabular numerals, item names          |
-| `--text-secondary`        | `#5e6d68`        | `#9eaca6`       | Explanatory copy, secondary metrics, timestamps          |
-| `--accent`                | `#3f7567`        | `#82b8a8`       | Primary button fill, Move to Trash highlight, focus ring |
-| `--accent-soft`           | `#dce9e3`        | `#263d36`       | Selected row tint, class breakdown container             |
-| `--accent-fg`             | `#24483e`        | `#cae6dc`       | Active mode selector text, high-contrast label           |
-| `--class-rebuildable-bg`  | `#daf0e4`        | `#1e3b2e`       | Rebuildable class count background                       |
-| `--class-rebuildable-fg`  | `#164e3a`        | `#8ce4bd`       | Rebuildable class count text                             |
-| `--class-review-bg`       | `#faecc6`        | `#382b13`       | Review class count background, blocked status pill       |
-| `--class-review-fg`       | `#5c3e00`        | `#ffd78a`       | Review class count text, blocked status glyph            |
-| `--class-protected-bg`    | `#e1e6e5`        | `#26302e`       | Protected lock background                                |
-| `--class-protected-fg`    | `#283632`        | `#ccd5d1`       | Protected lock icon and text                             |
-| `--class-irreversible-bg` | `#fae3e3`        | `#3b191b`       | Delete Now alert callout background, error pill          |
-| `--class-irreversible-fg` | `#7f1d1d`        | `#fca5a5`       | Delete Now alert text, failure status text               |
+| `--window`                | `#f6fbfc`        | `#0c1010`       | Window canvas background, modal backdrop scrim           |
+| `--surface`               | `#f1f6f7`        | `#171b1c`       | Review list background, summary container                |
+| `--surface-raised`        | `#ffffff`        | `#212525`       | Review tray surface, confirmation sheet body             |
+| `--divider`               | `#dadfdf`        | `#2d3131`       | Tray top border, modal header separator                  |
+| `--text-primary`          | `#181b1b`        | `#e5e9e9`       | Primary headlines, tabular numerals, item names          |
+| `--text-secondary`        | `#5a5f5f`        | `#a0a6a6`       | Explanatory copy, secondary metrics, timestamps          |
+| `--accent`                | `#118186`        | `#49a9ae`       | Primary button fill, Move to Trash highlight, focus ring |
+| `--accent-soft`           | `#dbf4f6`        | `#153335`       | Selected row tint, class breakdown container             |
+| `--accent-fg`             | `#00656a`        | `#64c3c8`       | Active mode selector text, high-contrast label           |
+| `--class-rebuildable-bg`  | `#dcf7e1`        | `#1a2e1e`       | Rebuildable class count background                       |
+| `--class-rebuildable-fg`  | `#1a5e30`        | `#73c385`       | Rebuildable class count text                             |
+| `--class-review-bg`       | `#ffeecd`        | `#3b2b0d`       | Review class count background, blocked status pill       |
+| `--class-review-fg`       | `#6e4900`        | `#e6b55d`       | Review class count text, blocked status glyph            |
+| `--class-protected-bg`    | `#d3d9d9`        | `#2f3434`       | Protected lock background                                |
+| `--class-protected-fg`    | `#181b1b`        | `#cbcece`       | Protected lock icon and text                             |
+| `--class-irreversible-bg` | `#ffe5e1`        | `#442321`       | Delete Now alert callout background, error pill          |
+| `--class-irreversible-fg` | `#9e2523`        | `#f07f77`       | Delete Now alert text, failure status text               |
