@@ -395,7 +395,10 @@ where
 mod tests {
     use super::*;
     use std::sync::Arc;
-    use std::sync::atomic::{AtomicBool, AtomicU64};
+    use std::sync::atomic::AtomicBool;
+    // Only the Unix-only cancellation-latency test counts verified entries.
+    #[cfg(unix)]
+    use std::sync::atomic::AtomicU64;
     use std::time::Instant;
 
     use crate::platform::tests::TestAdapter;
