@@ -126,10 +126,10 @@ A persistent, calm banner spans the top of the Home and Cleanup screens. The ban
 
 #### Styling and tokens
 
-- **Surface:** `--surface-raised` (`#ffffff` light / `#2a3632` dark).
-- **Border:** `1px solid var(--divider)` (`#dfe5e2` light / `#2e3a36` dark).
-- **Icon / Lock:** `--class-protected-fg` (`#283632` light / `#ccd5d1` dark).
-- **Primary action button (`Grant Access…`):** `--accent` background (`#3f7567` light / `#82b8a8` dark). Opens `x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles`.
+- **Surface:** `--surface-raised` (`#ffffff` light / `#212525` dark).
+- **Border:** `1px solid var(--divider)` (`#dadfdf` light / `#2d3131` dark).
+- **Icon / Lock:** `--class-protected-fg` (`#181b1b` light / `#cbcece` dark).
+- **Primary action button (`Grant Access…`):** `--accent` background (`#118186` light / `#49a9ae` dark). Opens `x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles`.
 - **Secondary action button:** `--surface` background with `--text-primary` border.
 
 ---
@@ -218,8 +218,8 @@ DiskClearance adheres to the following safety behavior:
 
 #### Styling and tokens
 
-- **Callout background:** `--class-review-bg` (`#faecc6` light / `#382b13` dark).
-- **Callout foreground:** `--class-review-fg` (`#5c3e00` light / `#ffd78a` dark).
+- **Callout background:** `--class-review-bg` (`#ffeecd` light / `#3b2b0d` dark).
+- **Callout foreground:** `--class-review-fg` (`#6e4900` light / `#e6b55d` dark).
 - **Border:** `1px solid var(--divider)`.
 
 ---
@@ -391,8 +391,8 @@ Red (`--class-irreversible-bg` / `--class-irreversible-fg`) appears here because
 
 #### Styling and tokens
 
-- **Header background:** `--class-irreversible-bg` (`#fae3e3` light / `#3b191b` dark).
-- **Header text / Icon:** `--class-irreversible-fg` (`#7f1d1d` light / `#fca5a5` dark).
+- **Header background:** `--class-irreversible-bg` (`#ffe5e1` light / `#442321` dark).
+- **Header text / Icon:** `--class-irreversible-fg` (`#9e2523` light / `#f07f77` dark).
 - **Body surface:** `--surface-raised`.
 
 ---
@@ -1213,20 +1213,20 @@ All visual styles use the semantic design tokens defined in `src/App.css` and do
 
 | Token Name                | Light Appearance | Dark Appearance | Component Role                                      |
 | :------------------------ | :--------------- | :-------------- | :-------------------------------------------------- |
-| `--window`                | `#f4f2ec`        | `#19211f`       | Window background canvas, modal backdrop scrim      |
-| `--surface`               | `#faf9f5`        | `#222c29`       | List background, view surface                       |
-| `--surface-raised`        | `#ffffff`        | `#2a3632`       | Callout bodies, cards, banner surfaces              |
-| `--divider`               | `#dfe5e2`        | `#2e3a36`       | Border lines, card dividers, table separators       |
-| `--text-primary`          | `#21312d`        | `#e4ece8`       | Primary headlines, item names, tabular numerals     |
-| `--text-secondary`        | `#5e6d68`        | `#9eaca6`       | Explanatory copy, secondary metadata, notes         |
-| `--accent`                | `#3f7567`        | `#82b8a8`       | Primary actions, clean disk status icon             |
-| `--accent-soft`           | `#dce9e3`        | `#263d36`       | Informational callouts, neutral status pills        |
-| `--accent-fg`             | `#24483e`        | `#cae6dc`       | High-contrast accent labels on soft backgrounds     |
-| `--class-rebuildable-bg`  | `#daf0e4`        | `#1e3b2e`       | Rebuildable item badge background                   |
-| `--class-rebuildable-fg`  | `#164e3a`        | `#8ce4bd`       | Rebuildable item badge text                         |
-| `--class-review-bg`       | `#faecc6`        | `#382b13`       | Review badge, partial/degraded callout background   |
-| `--class-review-fg`       | `#5c3e00`        | `#ffd78a`       | Review badge, partial/degraded callout text         |
-| `--class-protected-bg`    | `#e1e6e5`        | `#26302e`       | Protected lock background, standard access badge    |
-| `--class-protected-fg`    | `#283632`        | `#ccd5d1`       | Protected lock icon and text                        |
-| `--class-irreversible-bg` | `#fae3e3`        | `#3b191b`       | Fatal error banner background, unrecoverable action |
-| `--class-irreversible-fg` | `#7f1d1d`        | `#fca5a5`       | Fatal error banner text, unrecoverable action text  |
+| `--window`                | `#f6fbfc`        | `#0c1010`       | Window background canvas, modal backdrop scrim      |
+| `--surface`               | `#f1f6f7`        | `#171b1c`       | List background, view surface                       |
+| `--surface-raised`        | `#ffffff`        | `#212525`       | Callout bodies, cards, banner surfaces              |
+| `--divider`               | `#dadfdf`        | `#2d3131`       | Border lines, card dividers, table separators       |
+| `--text-primary`          | `#181b1b`        | `#e5e9e9`       | Primary headlines, item names, tabular numerals     |
+| `--text-secondary`        | `#5a5f5f`        | `#a0a6a6`       | Explanatory copy, secondary metadata, notes         |
+| `--accent`                | `#118186`        | `#49a9ae`       | Primary actions, clean disk status icon             |
+| `--accent-soft`           | `#dbf4f6`        | `#153335`       | Informational callouts, neutral status pills        |
+| `--accent-fg`             | `#00656a`        | `#64c3c8`       | High-contrast accent labels on soft backgrounds     |
+| `--class-rebuildable-bg`  | `#dcf7e1`        | `#1a2e1e`       | Rebuildable item badge background                   |
+| `--class-rebuildable-fg`  | `#1a5e30`        | `#73c385`       | Rebuildable item badge text                         |
+| `--class-review-bg`       | `#ffeecd`        | `#3b2b0d`       | Review badge, partial/degraded callout background   |
+| `--class-review-fg`       | `#6e4900`        | `#e6b55d`       | Review badge, partial/degraded callout text         |
+| `--class-protected-bg`    | `#d3d9d9`        | `#2f3434`       | Protected lock background, standard access badge    |
+| `--class-protected-fg`    | `#181b1b`        | `#cbcece`       | Protected lock icon and text                        |
+| `--class-irreversible-bg` | `#ffe5e1`        | `#442321`       | Fatal error banner background, unrecoverable action |
+| `--class-irreversible-fg` | `#9e2523`        | `#f07f77`       | Fatal error banner text, unrecoverable action text  |

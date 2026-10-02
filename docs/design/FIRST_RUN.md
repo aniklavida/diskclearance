@@ -86,22 +86,22 @@ Establish immediate reassurance in a single sentence: DiskClearance inspects sto
 
 #### Styling and tokens
 
-- **Surface:** `--window` (`#f4f2ec` light / `#19211f` dark).
+- **Surface:** `--window` (`#f6fbfc` light / `#0c1010` dark).
 - **Status pill:**
-  - Light: background `--accent-soft` (`#dce9e3`), foreground `--accent-fg` (`#24483e`).
-  - Dark: background `--accent-soft` (`#263d36`), foreground `--accent-fg` (`#cae6dc`).
+  - Light: background `--accent-soft` (`#dbf4f6`), foreground `--accent-fg` (`#00656a`).
+  - Dark: background `--accent-soft` (`#153335`), foreground `--accent-fg` (`#64c3c8`).
   - Typography: 12px, font-weight 700, letter-spacing 0.04em, uppercase.
 - **Headline (h1):**
   - Font size: clamp(36px, 5vw, 64px), line-height 1.05, tracking -0.04em.
-  - Color: `--text-primary` (`#21312d` light / `#e4ece8` dark).
+  - Color: `--text-primary` (`#181b1b` light / `#e5e9e9` dark).
 - **Lede / reassurance text:**
-  - Font size: 18px, line-height 1.5, color: `--text-secondary` (`#5e6d68` light / `#9eaca6` dark).
+  - Font size: 18px, line-height 1.5, color: `--text-secondary` (`#5a5f5f` light / `#a0a6a6` dark).
   - Margin: `--space-16` top, `--space-32` bottom.
 - **Primary action button (`Continue`):**
   - Min height: `--target-primary` (`40px`), padding: `0 var(--space-24)`.
   - Border radius: `--radius-control` (`8px`).
-  - Light: background `--accent` (`#3f7567`), text `#ffffff`.
-  - Dark: background `--accent` (`#82b8a8`), text `#19211f`.
+  - Light: background `--accent` (`#118186`), text `#ffffff`.
+  - Dark: background `--accent` (`#49a9ae`), text `#0c1010`.
   - Focus ring: 2px solid `--accent` with 2px offset.
 
 ---
@@ -166,8 +166,8 @@ Provide a single, uncluttered primary action. No scope pickers, no checkbox matr
 #### Styling and tokens
 
 - **Drive capacity card:**
-  - Background: `--surface` (`#faf9f5` light / `#222c29` dark).
-  - Border: 1px solid `--divider` (`#dfe5e2` light / `#2e3a36` dark).
+  - Background: `--surface` (`#f1f6f7` light / `#171b1c` dark).
+  - Border: 1px solid `--divider` (`#dadfdf` light / `#2d3131` dark).
   - Radius: `--radius-card` (`12px`), padding: `--space-24`.
 - **Capacity bar:**
   - Height: `8px`, border-radius: `--radius-full` (`999px`).
@@ -255,11 +255,11 @@ In the 1100 × 720 px window, the sheet is centered over the dim backdrop of the
 
 - **Overlay backdrop:** `rgba(0, 0, 0, 0.4)` light, `rgba(0, 0, 0, 0.65)` dark.
 - **Sheet surface:**
-  - Light: background `--surface-raised` (`#ffffff`), border 1px solid `--divider` (`#dfe5e2`), shadow `--card-shadow` (`0 18px 50px rgba(49, 71, 64, 0.08)`).
-  - Dark: background `--surface-raised` (`#2a3632`), border 1px solid `--divider` (`#2e3a36`), shadow `--card-shadow` (`0 18px 50px rgba(0, 0, 0, 0.35)`).
+  - Light: background `--surface-raised` (`#ffffff`), border 1px solid `--divider` (`#dadfdf`), shadow `--card-shadow` (`0 18px 50px rgba(49, 71, 64, 0.08)`).
+  - Dark: background `--surface-raised` (`#212525`), border 1px solid `--divider` (`#2d3131`), shadow `--card-shadow` (`0 18px 50px rgba(0, 0, 0, 0.35)`).
   - Radius: `--radius-surface` (`16px`), padding: `--space-32`.
 - **Feature comparison box:**
-  - Background: `--surface` (`#faf9f5` light / `#222c29` dark).
+  - Background: `--surface` (`#f1f6f7` light / `#171b1c` dark).
   - Internal divider: 1px solid `--divider`.
   - Radius: `--radius-control` (`8px`), padding: `--space-16`.
   - Headings: 13px, font-weight 650, color `--text-primary`.
@@ -331,12 +331,12 @@ Provide truthful, calm progress reporting: current traversal phase, active files
 #### Styling and tokens
 
 - **Progress track and bar:**
-  - Track: background `--divider` (`#dfe5e2` light / `#2e3a36` dark).
-  - Fill: background `--accent` (`#3f7567` light / `#82b8a8` dark).
+  - Track: background `--divider` (`#dadfdf` light / `#2d3131` dark).
+  - Fill: background `--accent` (`#118186` light / `#49a9ae` dark).
   - Height: `6px`, border-radius: `--radius-full` (`999px`).
   - Transition: `width 150ms ease-out` (disabled under `prefers-reduced-motion: reduce`).
 - **Live metrics container:**
-  - Background: `--surface` (`#faf9f5` light / `#222c29` dark).
+  - Background: `--surface` (`#f1f6f7` light / `#171b1c` dark).
   - Border: 1px solid `--divider`.
   - Radius: `--radius-card` (`12px`), padding: `--space-16`.
 - **Numeric display:**
@@ -433,9 +433,9 @@ From `src/App.css`:
 
 | Section               | Tokens (Light)                                                                       | Tokens (Dark)                                                                        | Visual Cue                                       | Selection Default            |
 | --------------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ | ------------------------------------------------ | ---------------------------- |
-| **Ready to clear**    | bg: `--class-rebuildable-bg` (`#daf0e4`)<br>fg: `--class-rebuildable-fg` (`#164e3a`) | bg: `--class-rebuildable-bg` (`#1e3b2e`)<br>fg: `--class-rebuildable-fg` (`#8ce4bd`) | Soft green badge + "Rebuildable" tag + checkable | Checked by default           |
-| **Needs your review** | bg: `--class-review-bg` (`#faecc6`)<br>fg: `--class-review-fg` (`#5c3e00`)           | bg: `--class-review-bg` (`#382b13`)<br>fg: `--class-review-fg` (`#ffd78a`)           | Amber badge + "Review" tag + warning cue         | **Never** checked by default |
-| **Protected**         | bg: `--class-protected-bg` (`#e1e6e5`)<br>fg: `--class-protected-fg` (`#283632`)     | bg: `--class-protected-bg` (`#26302e`)<br>fg: `--class-protected-fg` (`#ccd5d1`)     | Neutral slate badge + lock icon + "Protected"    | **Disabled / Uncheckable**   |
+| **Ready to clear**    | bg: `--class-rebuildable-bg` (`#dcf7e1`)<br>fg: `--class-rebuildable-fg` (`#1a5e30`) | bg: `--class-rebuildable-bg` (`#1a2e1e`)<br>fg: `--class-rebuildable-fg` (`#73c385`) | Soft green badge + "Rebuildable" tag + checkable | Checked by default           |
+| **Needs your review** | bg: `--class-review-bg` (`#ffeecd`)<br>fg: `--class-review-fg` (`#6e4900`)           | bg: `--class-review-bg` (`#3b2b0d`)<br>fg: `--class-review-fg` (`#e6b55d`)           | Amber badge + "Review" tag + warning cue         | **Never** checked by default |
+| **Protected**         | bg: `--class-protected-bg` (`#d3d9d9`)<br>fg: `--class-protected-fg` (`#181b1b`)     | bg: `--class-protected-bg` (`#2f3434`)<br>fg: `--class-protected-fg` (`#cbcece`)     | Neutral slate badge + lock icon + "Protected"    | **Disabled / Uncheckable**   |
 
 ---
 
@@ -510,7 +510,7 @@ Allow the user to inspect the planned operation with complete transparency. Item
   - Padding: `--space-16` `--space-24`.
 - **Primary action:** `Move to Trash` (`--accent` fill, default action).
 - **Secondary destructive action:** `Delete Now`
-  - Uses `--class-irreversible-bg` (`#fae3e3` light / `#3b191b` dark) and `--class-irreversible-fg` (`#7f1d1d` light / `#fca5a5` dark).
+  - Uses `--class-irreversible-bg` (`#ffe5e1` light / `#442321` dark) and `--class-irreversible-fg` (`#9e2523` light / `#f07f77` dark).
   - Explicit irreversible warning label attached.
 
 ---

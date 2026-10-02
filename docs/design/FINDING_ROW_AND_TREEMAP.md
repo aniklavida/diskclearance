@@ -72,9 +72,9 @@ Exact semantic tokens from `src/App.css` are used:
 
 | Safety Class    | Icon Glyph  | Text Label      | Light Appearance Tokens                                                              | Dark Appearance Tokens                                                               | Interaction Rule                   |
 | :-------------- | :---------- | :-------------- | :----------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------- | :--------------------------------- |
-| **Rebuildable** | `↺` (Loop)  | `"Rebuildable"` | bg: `--class-rebuildable-bg` (`#daf0e4`)<br>fg: `--class-rebuildable-fg` (`#164e3a`) | bg: `--class-rebuildable-bg` (`#1e3b2e`)<br>fg: `--class-rebuildable-fg` (`#8ce4bd`) | Checkable; selected by default     |
-| **Review**      | `◇` (Gate)  | `"Review"`      | bg: `--class-review-bg` (`#faecc6`)<br>fg: `--class-review-fg` (`#5c3e00`)           | bg: `--class-review-bg` (`#382b13`)<br>fg: `--class-review-fg` (`#ffd78a`)           | Checkable; **never** auto-selected |
-| **Protected**   | `🔒` (Lock) | `"Protected"`   | bg: `--class-protected-bg` (`#e1e6e5`)<br>fg: `--class-protected-fg` (`#283632`)     | bg: `--class-protected-bg` (`#26302e`)<br>fg: `--class-protected-fg` (`#ccd5d1`)     | **Disabled / Uncheckable**         |
+| **Rebuildable** | `↺` (Loop)  | `"Rebuildable"` | bg: `--class-rebuildable-bg` (`#dcf7e1`)<br>fg: `--class-rebuildable-fg` (`#1a5e30`) | bg: `--class-rebuildable-bg` (`#1a2e1e`)<br>fg: `--class-rebuildable-fg` (`#73c385`) | Checkable; selected by default     |
+| **Review**      | `◇` (Gate)  | `"Review"`      | bg: `--class-review-bg` (`#ffeecd`)<br>fg: `--class-review-fg` (`#6e4900`)           | bg: `--class-review-bg` (`#3b2b0d`)<br>fg: `--class-review-fg` (`#e6b55d`)           | Checkable; **never** auto-selected |
+| **Protected**   | `🔒` (Lock) | `"Protected"`   | bg: `--class-protected-bg` (`#d3d9d9`)<br>fg: `--class-protected-fg` (`#181b1b`)     | bg: `--class-protected-bg` (`#2f3434`)<br>fg: `--class-protected-fg` (`#cbcece`)     | **Disabled / Uncheckable**         |
 
 ### CSS specification
 
@@ -125,8 +125,8 @@ A protected item is **reassurance that the tool knows what to leave alone**, not
 ├────────────────────────────────────────┤  ├────────────────────────────────────────┤
 │ Badge:   [🔒 Protected]                │  │ Action:  [⚠ Delete Now (Irreversible)]  │
 │ Surface: Neutral slate tint            │  │ Surface: Danger red alert tint         │
-│ Light:   #e1e6e5 bg / #283632 fg       │  │ Light:   #fae3e3 bg / #7f1d1d fg       │
-│ Dark:    #26302e bg / #ccd5d1 fg       │  │ Dark:    #3b191b bg / #fca5a5 fg       │
+│ Light:   #d3d9d9 bg / #181b1b fg       │  │ Light:   #ffe5e1 bg / #9e2523 fg       │
+│ Dark:    #2f3434 bg / #cbcece fg       │  │ Dark:    #442321 bg / #f07f77 fg       │
 │ Control: Checkbox disabled (uncheck)   │  │ Control: High-contrast red button      │
 │ Copy:    "Protected by system policy.  │  │ Copy:    "Permanently removes files.   │
 │           Cannot be modified."         │  │           Action cannot be undone."    │
@@ -271,12 +271,12 @@ Expanding a finding row opens the integrated evidence disclosure drawer immediat
 ### Styling and tokens
 
 - **Disclosure container:**
-  - Background: `--surface` (`#faf9f5` light / `#222c29` dark).
-  - Border: 1px solid `--divider` (`#dfe5e2` light / `#2e3a36` dark).
+  - Background: `--surface` (`#f1f6f7` light / `#171b1c` dark).
+  - Border: 1px solid `--divider` (`#dadfdf` light / `#2d3131` dark).
   - Radius: `--radius-control` (`8px`), margin: `var(--space-8) var(--space-16) var(--space-12)`.
   - Padding: `var(--space-16)`.
 - **Path codeblock:**
-  - Background: `--window` (`#f4f2ec` light / `#19211f` dark).
+  - Background: `--window` (`#f6fbfc` light / `#0c1010` dark).
   - Border: 1px solid `--divider`.
   - Typography: `ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px;`.
   - Color: `--text-primary`.
@@ -636,20 +636,20 @@ All components use design tokens established in `docs/design/TOKENS.md` and defi
 
 | Token Name                | Light Appearance | Dark Appearance | Component Role                                   |
 | :------------------------ | :--------------- | :-------------- | :----------------------------------------------- |
-| `--window`                | `#f4f2ec`        | `#19211f`       | Main window backdrop, treemap canvas background  |
-| `--surface`               | `#faf9f5`        | `#222c29`       | Finding row container, group header surface      |
-| `--surface-raised`        | `#ffffff`        | `#2a3632`       | Evidence disclosure drawer, inspector card       |
-| `--divider`               | `#dfe5e2`        | `#2e3a36`       | Table grid lines, group separators               |
-| `--text-primary`          | `#21312d`        | `#e4ece8`       | Entity names, tabular sizes, primary headings    |
-| `--text-secondary`        | `#5e6d68`        | `#9eaca6`       | Timestamps, recoverability copy, path text       |
-| `--accent`                | `#3f7567`        | `#82b8a8`       | Focus ring, primary button fills, active tabs    |
-| `--accent-soft`           | `#dce9e3`        | `#263d36`       | Row hover highlight, group selection tint        |
-| `--accent-fg`             | `#24483e`        | `#cae6dc`       | Active nav text, selection icon fill             |
-| `--class-rebuildable-bg`  | `#daf0e4`        | `#1e3b2e`       | Rebuildable badge fill, safe treemap tile border |
-| `--class-rebuildable-fg`  | `#164e3a`        | `#8ce4bd`       | Rebuildable badge text and glyph                 |
-| `--class-review-bg`       | `#faecc6`        | `#382b13`       | Review badge fill, heuristic warning border      |
-| `--class-review-fg`       | `#5c3e00`        | `#ffd78a`       | Review badge text and glyph                      |
-| `--class-protected-bg`    | `#e1e6e5`        | `#26302e`       | Protected lock badge fill, system tile border    |
-| `--class-protected-fg`    | `#283632`        | `#ccd5d1`       | Protected lock badge text and lock glyph         |
-| `--class-irreversible-bg` | `#fae3e3`        | `#3b191b`       | Delete Now modal background                      |
-| `--class-irreversible-fg` | `#7f1d1d`        | `#fca5a5`       | Delete Now modal warning text and button         |
+| `--window`                | `#f6fbfc`        | `#0c1010`       | Main window backdrop, treemap canvas background  |
+| `--surface`               | `#f1f6f7`        | `#171b1c`       | Finding row container, group header surface      |
+| `--surface-raised`        | `#ffffff`        | `#212525`       | Evidence disclosure drawer, inspector card       |
+| `--divider`               | `#dadfdf`        | `#2d3131`       | Table grid lines, group separators               |
+| `--text-primary`          | `#181b1b`        | `#e5e9e9`       | Entity names, tabular sizes, primary headings    |
+| `--text-secondary`        | `#5a5f5f`        | `#a0a6a6`       | Timestamps, recoverability copy, path text       |
+| `--accent`                | `#118186`        | `#49a9ae`       | Focus ring, primary button fills, active tabs    |
+| `--accent-soft`           | `#dbf4f6`        | `#153335`       | Row hover highlight, group selection tint        |
+| `--accent-fg`             | `#00656a`        | `#64c3c8`       | Active nav text, selection icon fill             |
+| `--class-rebuildable-bg`  | `#dcf7e1`        | `#1a2e1e`       | Rebuildable badge fill, safe treemap tile border |
+| `--class-rebuildable-fg`  | `#1a5e30`        | `#73c385`       | Rebuildable badge text and glyph                 |
+| `--class-review-bg`       | `#ffeecd`        | `#3b2b0d`       | Review badge fill, heuristic warning border      |
+| `--class-review-fg`       | `#6e4900`        | `#e6b55d`       | Review badge text and glyph                      |
+| `--class-protected-bg`    | `#d3d9d9`        | `#2f3434`       | Protected lock badge fill, system tile border    |
+| `--class-protected-fg`    | `#181b1b`        | `#cbcece`       | Protected lock badge text and lock glyph         |
+| `--class-irreversible-bg` | `#ffe5e1`        | `#442321`       | Delete Now modal background                      |
+| `--class-irreversible-fg` | `#9e2523`        | `#f07f77`       | Delete Now modal warning text and button         |
