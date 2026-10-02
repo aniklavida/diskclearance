@@ -207,10 +207,11 @@ impl PlatformAdapter for ClassificationTestAdapter {
     }
 
     fn file_identity(&self, path: &Path) -> Result<FileIdentity, PlatformError> {
-        let meta = std::fs::symlink_metadata(path).map_err(|e| PlatformError::Io(e.to_string()))?;
         #[cfg(unix)]
         {
             use std::os::unix::fs::MetadataExt;
+            let meta =
+                std::fs::symlink_metadata(path).map_err(|e| PlatformError::Io(e.to_string()))?;
             Ok(FileIdentity {
                 device_id: meta.dev(),
                 inode: meta.ino(),
@@ -218,6 +219,11 @@ impl PlatformAdapter for ClassificationTestAdapter {
         }
         #[cfg(not(unix))]
         {
+            // No portable equivalent of `st_dev`/`st_ino` here, so report the
+            // capability as unsupported rather than inventing an identity. A
+            // missing path still reports as missing rather than unsupported.
+            std::fs::symlink_metadata(path)
+                .map_err(|_| PlatformError::NotFound(path.to_path_buf()))?;
             Err(PlatformError::Unsupported(
                 "filesystem identity (device_id and inode) is not available on this platform",
             ))
@@ -582,6 +588,10 @@ fn test_symlink_from_rebuildable_cache_into_source_tree() {
 }
 
 /// 2. A path replaced between classification and re-read
+// Unix-only: proving the replacement is detected means proving the new file
+// carries a different device id and inode, and the second half of the test
+// replaces the path with a symlink. Neither signal exists on Windows.
+#[cfg(unix)]
 #[test]
 fn test_path_replaced_between_classification_and_reread() {
     let catalogue = RuleCatalogue::new();

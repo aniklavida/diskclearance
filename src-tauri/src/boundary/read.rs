@@ -595,10 +595,18 @@ pub fn detect_exact_duplicates_core(
 #[cfg(test)]
 mod tests {
     use super::*;
+    // Only the Unix-only scan test below builds a fixture and a platform
+    // adapter; the schema-only tests above it need neither.
+    #[cfg(unix)]
     use crate::platform::tests::TestAdapter;
+    #[cfg(unix)]
     use crate::scan::fixtures::DisposableFixtureTree;
+    #[cfg(unix)]
     use std::sync::Mutex;
 
+    // The sink collects emissions in memory so the Unix-only scan test can wait
+    // for the background worker's terminal event; nothing else here uses it.
+    #[cfg(unix)]
     #[derive(Default, Clone)]
     struct MockSink {
         progress: Arc<Mutex<Vec<ScanProgressPayload>>>,
@@ -606,6 +614,7 @@ mod tests {
         terminals: Arc<Mutex<Vec<TerminalCompletionPayload>>>,
     }
 
+    #[cfg(unix)]
     impl ScanEventSink for MockSink {
         fn emit_progress(&mut self, payload: ScanProgressPayload) {
             self.progress.lock().unwrap().push(payload);

@@ -82,7 +82,7 @@ pub fn to_hex(bytes: &[u8; 32]) -> String {
     let mut s = String::with_capacity(64);
     for b in bytes {
         use std::fmt::Write;
-        let _ = write!(s, "{:02x}", b);
+        let _ = write!(s, "{b:02x}");
     }
     s
 }
@@ -235,7 +235,7 @@ pub fn detect_duplicates<P: AsRef<Path>>(
 
                 let retained_cand = confirmed_files.remove(0);
                 let retained_item = DuplicateItem::new(
-                    format!("dup-{}-retained", group_counter),
+                    format!("dup-{group_counter}-retained"),
                     retained_cand.path.clone(),
                     retained_cand.canonical_path.clone(),
                     retained_cand.size_bytes,
@@ -273,7 +273,7 @@ pub fn detect_duplicates<P: AsRef<Path>>(
 
                 let hash_hex = to_hex(&hash);
                 let group = DuplicateGroup::new(
-                    format!("group-{}", group_counter),
+                    format!("group-{group_counter}"),
                     retained_cand.size_bytes,
                     hash_hex,
                     retained_item,

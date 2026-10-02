@@ -162,6 +162,11 @@ fn delete_directory_recursively(
                 ));
             }
         }
+        // Non-Unix targets expose no device id to compare against, so there is
+        // no mount boundary left to check. The device id is still threaded
+        // through the recursion so one signature serves every target.
+        #[cfg(not(unix))]
+        let _ = root_device_id;
 
         // Symlink guard: remove symlink node ONLY; NEVER traverse into target
         if symlink_meta.file_type().is_symlink() {

@@ -1,18 +1,26 @@
-use std::fs::{self, File};
+use std::fs;
+#[cfg(unix)]
+use std::fs::File;
+#[cfg(unix)]
 use std::io::Write;
 use std::path::PathBuf;
 
+#[cfg(unix)]
 use crate::boundary::cancellation::CancellationToken;
+#[cfg(unix)]
 use crate::classify::class::SafetyClass;
 use crate::duplicates::detect::is_excluded_path;
+#[cfg(unix)]
 use crate::duplicates::engine::{
     DuplicateDetectionMetrics, DuplicateDetectionOptions, detect_duplicates,
 };
 use crate::duplicates::hashing::{
     ChunkVerifyingReader, STREAMING_CHUNK_SIZE, compute_full_hash_streaming,
 };
+#[cfg(unix)]
+use crate::duplicates::model::RetainedRule;
 use crate::duplicates::model::{
-    DuplicateGroup, DuplicateItem, DuplicatePlanError, RetainedRule, StorageSharingKind,
+    DuplicateGroup, DuplicateItem, DuplicatePlanError, StorageSharingKind,
 };
 
 /// Disposable test directory that cleans up on drop.
@@ -29,6 +37,9 @@ impl TempTestDir {
         Self { path }
     }
 
+    /// Only the Unix-only detection tests write files through this helper; the
+    /// exclusion test builds its tree with `fs` directly.
+    #[cfg(unix)]
     fn file(&self, name: &str, content: &[u8]) -> PathBuf {
         let p = self.path.join(name);
         let mut f = File::create(&p).expect("failed to create file");
@@ -47,6 +58,10 @@ impl Drop for TempTestDir {
 // -----------------------------------------------------------------------------
 // Done-when Test 1: Two byte-identical files of same size grouped; differing middle byte rejected
 // -----------------------------------------------------------------------------
+// Unix-only: detection reads device id and inode from the live platform adapter
+// to recognise hardlinks and clones, which the Windows adapter reports as
+// unsupported and therefore skips every candidate.
+#[cfg(unix)]
 #[test]
 fn test_byte_identical_files_grouped_and_middle_byte_differences_rejected() {
     let fixture = TempTestDir::new("staged_diff");
@@ -108,6 +123,9 @@ fn test_byte_identical_files_grouped_and_middle_byte_differences_rejected() {
 // -----------------------------------------------------------------------------
 // Done-when Test 2: Hardlinked pair reported as sharing storage and contributes zero reclaimable bytes
 // -----------------------------------------------------------------------------
+// Unix-only: a hardlink is recognised by comparing device id and inode, which
+// only the Unix platform adapter reports.
+#[cfg(unix)]
 #[test]
 fn test_hardlinked_pair_reported_as_sharing_storage_with_zero_reclaimable_bytes() {
     let fixture = TempTestDir::new("hardlink");
@@ -152,6 +170,9 @@ fn test_hardlinked_pair_reported_as_sharing_storage_with_zero_reclaimable_bytes(
 // -----------------------------------------------------------------------------
 // Done-when Test 3: APFS clone pair reported as sharing storage with zero reclaimable bytes
 // -----------------------------------------------------------------------------
+// Unix-only: the assertion is that clones keep distinct inodes, which reads Unix
+// metadata directly.
+#[cfg(unix)]
 #[test]
 fn test_apfs_clone_pair_reported_as_sharing_storage_with_zero_reclaimable_bytes() {
     {
@@ -288,6 +309,9 @@ fn test_no_group_is_ever_fully_selected_and_retained_cannot_be_planned_with_all_
 // -----------------------------------------------------------------------------
 // Done-when Test 5: Nothing is preselected anywhere in the duplicates data model
 // -----------------------------------------------------------------------------
+// Unix-only: the group under inspection is produced by detection against the live
+// Unix platform adapter.
+#[cfg(unix)]
 #[test]
 fn test_nothing_is_preselected_anywhere_in_duplicates_data_model() {
     let fixture = TempTestDir::new("no_preselection");
@@ -366,6 +390,9 @@ fn test_streaming_reads_keep_memory_bounded_during_large_file_hashing() {
 // -----------------------------------------------------------------------------
 // Done-when Test 7: Cancellation preserves confirmed duplicate groups
 // -----------------------------------------------------------------------------
+// Unix-only: candidates only reach the grouping stages when the Unix platform
+// adapter reports their identity.
+#[cfg(unix)]
 #[test]
 fn test_cancellation_preserves_confirmed_duplicate_groups() {
     let fixture = TempTestDir::new("cancellation");
@@ -401,14 +428,17 @@ fn test_cancellation_preserves_confirmed_duplicate_groups() {
 // -----------------------------------------------------------------------------
 // Cheapest-first test: Full hashing never runs first; cheap stages eliminate candidates
 // -----------------------------------------------------------------------------
+// Unix-only: the elimination counts asserted here only accumulate for candidates
+// the Unix platform adapter reports entry metadata for.
+#[cfg(unix)]
 #[test]
 fn test_full_hashing_never_runs_first_and_cheap_stages_eliminate_candidates() {
     let fixture = TempTestDir::new("cheapest_first");
     let adapter = crate::platform::create_platform_adapter();
 
     // 5 files with unique sizes: 100, 200, 300, 400, 500 bytes
-    let f1 = fixture.file("sz_100.bin", &vec![1u8; 100]);
-    let f2 = fixture.file("sz_200.bin", &vec![2u8; 200]);
+    let f1 = fixture.file("sz_100.bin", &[1u8; 100]);
+    let f2 = fixture.file("sz_200.bin", &[2u8; 200]);
     let f3 = fixture.file("sz_300.bin", &vec![3u8; 300]);
     let f4 = fixture.file("sz_400.bin", &vec![4u8; 400]);
     let f5 = fixture.file("sz_500.bin", &vec![5u8; 500]);
