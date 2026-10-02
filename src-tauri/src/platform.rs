@@ -374,6 +374,11 @@ impl PlatformAdapter for UnsupportedAdapter {
     }
 }
 
+// The four helpers below parse application bundles. Only the macOS adapter and
+// the shared test adapter reach them, so on any other target they are compiled
+// out rather than left behind as dead code. Windows is an unsupported platform
+// (README, SPEC); this keeps the crate compiling there without claiming support.
+#[cfg(any(target_os = "macos", test))]
 fn plist_string(value: &plist::Value, key: &str) -> Option<String> {
     let plist::Value::Dictionary(dictionary) = value else {
         return None;
@@ -384,6 +389,7 @@ fn plist_string(value: &plist::Value, key: &str) -> Option<String> {
     }
 }
 
+#[cfg(any(target_os = "macos", test))]
 fn application_bundle_components(path: &Path) -> Result<Vec<String>, PlatformError> {
     let frameworks = path.join("Contents/Frameworks");
     if !frameworks.is_dir() {
@@ -399,6 +405,7 @@ fn application_bundle_components(path: &Path) -> Result<Vec<String>, PlatformErr
     Ok(components)
 }
 
+#[cfg(any(target_os = "macos", test))]
 fn measure_bundle_footprint(path: &Path) -> Result<u64, PlatformError> {
     fn visit(
         path: &Path,
@@ -445,6 +452,7 @@ fn measure_bundle_footprint(path: &Path) -> Result<u64, PlatformError> {
     Ok(total)
 }
 
+#[cfg(any(target_os = "macos", test))]
 fn inspect_application_bundle(path: &Path) -> Result<ApplicationMetadata, PlatformError> {
     let info_path = path.join("Contents/Info.plist");
     let plist = plist::Value::from_file(&info_path).map_err(|error| {
@@ -1563,25 +1571,16 @@ pub mod tests {
                 Ok(*id)
             } else if let Some(meta) = self.entry_metadata_map.lock().unwrap().get(path) {
                 Ok(meta.identity)
-            } else if let Ok(meta) = std::fs::symlink_metadata(path) {
+            } else {
                 #[cfg(unix)]
                 {
                     use std::os::unix::fs::MetadataExt;
+                    let meta = std::fs::symlink_metadata(path)
+                        .map_err(|_| PlatformError::NotFound(path.to_path_buf()))?;
                     Ok(FileIdentity {
                         device_id: meta.dev(),
                         inode: meta.ino(),
                     })
-                }
-                #[cfg(not(unix))]
-                {
-                    Err(PlatformError::Unsupported(
-                        "filesystem identity (device_id and inode) is not available on this platform",
-                    ))
-                }
-            } else {
-                #[cfg(unix)]
-                {
-                    Err(PlatformError::NotFound(path.to_path_buf()))
                 }
                 #[cfg(not(unix))]
                 {

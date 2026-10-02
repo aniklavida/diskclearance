@@ -166,42 +166,37 @@ impl DisposableFixtureTree {
     pub fn replace_with_new_inode(&self, rel: &str, content: &[u8]) -> PathBuf {
         let path = self.root.join(rel);
         self.assert_path_in_fixture(&path);
-        #[cfg(unix)]
-        let orig_ino = {
-            use std::os::unix::fs::MetadataExt;
-            std::fs::metadata(&path).map(|m| m.ino()).unwrap_or(0)
-        };
-
         std::fs::remove_file(&path).expect("failed to remove original file");
 
         // On filesystems like APFS, quickly recreating may recycle the inode.
         // Create dummy files to force allocation of distinct inode if needed.
-        let mut dummies = Vec::new();
-        let mut attempts = 0;
-        loop {
-            std::fs::write(&path, content).expect("failed to write replaced file");
-            #[cfg(unix)]
-            let new_ino = {
-                use std::os::unix::fs::MetadataExt;
-                std::fs::metadata(&path).map(|m| m.ino()).unwrap_or(0)
-            };
-            #[cfg(not(unix))]
-            break;
-
-            #[cfg(unix)]
-            if new_ino != orig_ino || orig_ino == 0 || attempts > 20 {
-                break;
+        // Reading an inode needs Unix metadata, so without it the replacement is
+        // a plain rewrite: no allocation of a distinct inode is observable.
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::MetadataExt;
+            let orig_ino = std::fs::metadata(&path).map(|m| m.ino()).unwrap_or(0);
+            let mut dummies = Vec::new();
+            let mut attempts = 0;
+            loop {
+                std::fs::write(&path, content).expect("failed to write replaced file");
+                let new_ino = std::fs::metadata(&path).map(|m| m.ino()).unwrap_or(0);
+                if new_ino != orig_ino || orig_ino == 0 || attempts > 20 {
+                    break;
+                }
+                std::fs::remove_file(&path).expect("remove retry file");
+                let dummy = self.root.join(format!(".dummy_alloc_{attempts}"));
+                let _ = std::fs::write(&dummy, b"pad");
+                dummies.push(dummy);
+                attempts += 1;
             }
-            std::fs::remove_file(&path).expect("remove retry file");
-            let dummy = self.root.join(format!(".dummy_alloc_{attempts}"));
-            let _ = std::fs::write(&dummy, b"pad");
-            dummies.push(dummy);
-            attempts += 1;
-        }
 
-        for dummy in dummies {
-            let _ = std::fs::remove_file(dummy);
+            for dummy in dummies {
+                let _ = std::fs::remove_file(dummy);
+            }
         }
+        #[cfg(not(unix))]
+        std::fs::write(&path, content).expect("failed to write replaced file");
 
         path
     }

@@ -5,7 +5,11 @@ use serde_json::json;
 
 use crate::classify::class::SafetyClass;
 use crate::platform::tests::TestAdapter;
-use crate::platform::{ApplicationDataRoot, ApplicationDataRootKind, PlatformAdapter};
+use crate::platform::{ApplicationDataRoot, ApplicationDataRootKind};
+// Only the Unix-only bundle footprint test calls adapter methods on the macOS
+// adapter itself; every other test here works through the test adapter.
+#[cfg(unix)]
+use crate::platform::PlatformAdapter;
 use crate::scan::fixtures::DisposableFixtureTree;
 
 use super::{
