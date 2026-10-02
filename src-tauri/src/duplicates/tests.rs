@@ -407,8 +407,8 @@ fn test_full_hashing_never_runs_first_and_cheap_stages_eliminate_candidates() {
     let adapter = crate::platform::create_platform_adapter();
 
     // 5 files with unique sizes: 100, 200, 300, 400, 500 bytes
-    let f1 = fixture.file("sz_100.bin", &vec![1u8; 100]);
-    let f2 = fixture.file("sz_200.bin", &vec![2u8; 200]);
+    let f1 = fixture.file("sz_100.bin", &[1u8; 100]);
+    let f2 = fixture.file("sz_200.bin", &[2u8; 200]);
     let f3 = fixture.file("sz_300.bin", &vec![3u8; 300]);
     let f4 = fixture.file("sz_400.bin", &vec![4u8; 400]);
     let f5 = fixture.file("sz_500.bin", &vec![5u8; 500]);
